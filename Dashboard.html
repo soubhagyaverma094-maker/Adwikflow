@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdwikFlow — Lead Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#07080F;--surface:#0E1020;--card:#131629;--border:rgba(255,255,255,0.08);--accent:#5B5FFF;--accent2:#A259FF;--green:#00E5A0;--red:#FF5C7A;--yellow:#FFB930;--muted:#7B80A8;--text:#E8EAF6;--grad:linear-gradient(135deg,#5B5FFF,#A259FF)}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh}
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.4rem;position:sticky;top:0;z-index:50}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;color:#fff}
+.logo span{color:var(--accent)}
+.tb-right{display:flex;align-items:center;gap:.8rem}
+.company-pill{background:rgba(91,95,255,.1);border:1px solid rgba(91,95,255,.25);color:#A0A4FF;padding:.3rem .8rem;border-radius:100px;font-size:.76rem;font-weight:600}
+.btn-out{background:var(--card);color:var(--muted);border:1px solid var(--border);padding:.45rem .9rem;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer}
+.btn-out:hover{color:#fff}
+.wrap{max-width:1200px;margin:0 auto;padding:1.6rem 1.2rem}
+.page-title{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:#fff;margin-bottom:.2rem}
+.page-sub{color:var(--muted);font-size:.85rem;margin-bottom:1.6rem}
+.loading{text-align:center;padding:4rem 1rem;color:var(--muted)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;margin:0 auto 1rem;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* summary */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:.75rem;margin-bottom:1.5rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem}
+.c-lbl{color:var(--muted);font-size:.7rem;font-weight:600;text-transform:uppercase;margin-bottom:.4rem;letter-spacing:.02em}
+.c-val{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:#fff;line-height:1}
+.c-sub{color:var(--muted);font-size:.68rem;margin-top:.25rem}
+/* panels */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.3rem;margin-bottom:1.3rem}
+.p-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.94rem;color:#fff;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap}
+.badge{background:rgba(0,229,160,.12);color:var(--green);font-size:.68rem;font-weight:600;padding:.2rem .6rem;border-radius:100px}
+.badge.y{background:rgba(255,185,48,.12);color:var(--yellow)}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{color:var(--muted);font-size:.68rem;font-weight:600;text-transform:uppercase;padding:.55rem .7rem;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:.6rem .7rem;font-size:.82rem;border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.tp-table{min-width:600px}
+.tp-table th,.tp-table td{text-align:center}
+.tp-table th:first-child,.tp-table td:first-child{text-align:left}
+.tp-table td:first-child{font-weight:600;color:#fff}
+.tp-row{cursor:pointer;transition:background .2s}
+.tp-row:hover{background:rgba(91,95,255,.06)}
+.lead-table{min-width:760px}
+/* status */
+.pill{display:inline-block;padding:.16rem .55rem;border-radius:100px;font-size:.7rem;font-weight:600;white-space:nowrap}
+.s-notpicked{background:rgba(123,128,168,.18);color:#9aa}
+.s-picked{background:rgba(91,95,255,.15);color:#A0A4FF}
+.s-interested{background:rgba(0,229,160,.15);color:var(--green)}
+.s-notint{background:rgba(255,92,122,.15);color:var(--red)}
+.s-followup{background:rgba(255,185,48,.15);color:var(--yellow)}
+.s-closed{background:rgba(0,229,160,.22);color:var(--green);font-weight:700}
+.st-sel{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:.32rem .5rem;color:var(--text);font-size:.75rem;outline:none;cursor:pointer;font-family:inherit}
+.st-sel:focus{border-color:var(--accent)}
+.st-sel:disabled{opacity:.5}
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--muted);font-size:.85rem}
+.toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid rgba(0,229,160,.35);color:var(--green);padding:.7rem 1.2rem;border-radius:10px;font-size:.82rem;font-weight:600;opacity:0;pointer-events:none;transition:.3s;z-index:200}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+.toast.err{border-color:rgba(255,92,122,.35);color:var(--red)}
+/* member modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);z-index:150;display:none;align-items:center;justify-content:center;padding:1rem}
+.overlay.on{display:flex}
+.modal{background:var(--surface);border:1px solid rgba(91,95,255,.3);border-radius:18px;max-width:720px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;position:relative;animation:pop .3s ease}
+@keyframes pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+.m-scroll{padding:1.8rem;overflow-y:auto}
+.m-close{position:absolute;top:1rem;right:1rem;background:var(--card);border:1px solid var(--border);color:var(--muted);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:.9rem;z-index:2}
+.mr-head{display:flex;align-items:center;gap:1rem;margin-bottom:1.4rem}
+.mr-av{width:52px;height:52px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;color:#fff;flex-shrink:0}
+.mr-nm{font-family:'Syne',sans-serif;font-size:1.35rem;font-weight:800;color:#fff}
+.mr-sub{font-size:.8rem;color:var(--muted)}
+.mr-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.55rem;margin-bottom:1.4rem}
+.mr-st{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.75rem;text-align:center}
+.mr-v{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:#fff}
+.mr-l{font-size:.63rem;color:var(--muted);margin-top:.15rem}
+.mr-sec{font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--accent);margin-bottom:.7rem;letter-spacing:.06em}
+.mr-table{min-width:640px}
+@media(max-width:600px){.mr-stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">Adwik<span>Flow</span></div>
+  <div class="tb-right">
+    <span class="company-pill" id="companyName">—</span>
+    <button class="btn-out" onclick="refresh()">↻ Refresh</button>
+    <button class="btn-out" onclick="logout()">Log Out</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div id="loading" class="loading"><div class="spinner"></div>Loading your leads…</div>
+
+  <div id="content" style="display:none">
+    <div class="page-title">Lead Management</div>
+    <div class="page-sub">Leads auto-capture from your channels. Click a team member for their full report.</div>
+
+    <div class="grid" id="summary"></div>
+
+    <div class="panel">
+      <div class="p-title">Team Performance <span class="badge y">Click a member for full report</span></div>
+      <div class="scroll"><table class="tp-table" id="teamTable"></table></div>
+    </div>
+
+    <div class="panel">
+      <div class="p-title">All Leads <span class="badge" id="leadCount">0 leads</span></div>
+      <div class="scroll"><table class="lead-table" id="leadTable"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBER REPORT -->
+<div class="overlay" id="memberOverlay" onclick="if(event.target===this)closeMember()">
+  <div class="modal">
+    <button class="m-close" onclick="closeMember()">✕</button>
+    <div class="m-scroll" id="memberBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+const SUPABASE_URL = 'https://jytgogooniceczmukjyy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_sYReBaX4jW9Vgzfut0ZVxw_TYmMif41';
+// ═══════════════════════════════════════════════
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const STATUSES = [
+  { key:'notpicked',  label:'📵 Not Picked',    cls:'s-notpicked'  },
+  { key:'picked',     label:'📞 Call Picked',   cls:'s-picked'     },
+  { key:'interested', label:'👍 Interested',    cls:'s-interested' },
+  { key:'notint',     label:'👎 Not Interested',cls:'s-notint'     },
+  { key:'followup',   label:'🔁 Follow Up',     cls:'s-followup'   },
+  { key:'closed',     label:'✅ Deal Closed',   cls:'s-closed'     },
+];
+const stMeta = k => STATUSES.find(s => s.key === k) || STATUSES[0];
+const srcIcon = { WhatsApp:'💬', Email:'📧', SMS:'📱', Website:'🌐' };
+
+let company = null, members = [], leads = [];
+
+// ── TIME FORMAT ──
+function fmt(ts){
+  if(!ts) return '—';
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ', ' +
+         d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ── TOAST ──
+let toastTimer;
+function toast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = 'toast', 2200);
+}
+
+// ── LOAD ──
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ window.location.href = 'index.html'; return; }
+
+  const { data: comp, error: e1 } = await sb.from('companies').select('*').eq('owner_id', session.user.id).maybeSingle();
+  if(e1 || !comp){ document.getElementById('loading').innerHTML = 'No workspace found. <a href="index.html" style="color:var(--accent)">Go back</a>'; return; }
+  company = comp;
+  document.getElementById('companyName').textContent = comp.name;
+
+  await loadData();
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+}
+
+async function loadData(){
+  const [tm, ld] = await Promise.all([
+    sb.from('team_members').select('*').eq('company_id', company.id).eq('active', true).order('name'),
+    sb.from('leads').select('*').eq('company_id', company.id).order('received_at', { ascending:false }),
+  ]);
+  members = tm.data || [];
+  leads   = ld.data || [];
+  render();
+}
+
+async function refresh(){
+  await loadData();
+  toast('✓ Refreshed');
+}
+
+// ── RENDER ──
+function render(){
+  renderSummary();
+  renderTeam();
+  renderLeads();
+}
+
+function renderSummary(){
+  const c = { total: leads.length };
+  STATUSES.forEach(s => c[s.key] = leads.filter(l => l.status === s.key).length);
+  const cards = [
+    { l:'Total Leads',       v:c.total,      s:'auto-captured'    },
+    { l:'📵 Not Picked',     v:c.notpicked,  s:'call not answered'},
+    { l:'📞 Picked',         v:c.picked,     s:'call answered'    },
+    { l:'👍 Interested',     v:c.interested, s:'want to proceed'  },
+    { l:'👎 Not Interested', v:c.notint,     s:'declined'         },
+    { l:'🔁 Follow Up',      v:c.followup,   s:'call later'       },
+    { l:'✅ Deals Closed',   v:c.closed,     s:'won'              },
+  ];
+  document.getElementById('summary').innerHTML = cards.map(x =>
+    `<div class="card"><div class="c-lbl">${x.l}</div><div class="c-val">${x.v}</div><div class="c-sub">${x.s}</div></div>`
+  ).join('');
+}
+
+function renderTeam(){
+  let h = '<thead><tr><th>Member</th><th>Total</th><th>📵</th><th>📞</th><th>👍</th><th>👎</th><th>🔁</th><th>✅ Closed</th><th></th></tr></thead><tbody>';
+  if(!members.length){
+    h += '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1.2rem">No team members</td></tr>';
+  }
+  members.forEach(m => {
+    const ml = leads.filter(l => l.assigned_to === m.id);
+    const n = s => ml.filter(l => l.status === s).length;
+    h += `<tr class="tp-row" onclick="openMember('${m.id}')">
+      <td>${m.name}</td><td>${ml.length}</td>
+      <td>${n('notpicked')}</td><td>${n('picked')}</td>
+      <td>${n('interested')}</td><td>${n('notint')}</td><td>${n('followup')}</td>
+      <td style="color:var(--green);font-weight:700">${n('closed')}</td>
+      <td style="color:var(--accent);font-size:.7rem">View →</td></tr>`;
+  });
+  h += '</tbody>';
+  document.getElementById('teamTable').innerHTML = h;
+}
+
+function renderLeads(){
+  document.getElementById('leadCount').textContent = leads.length + ' leads';
+  let h = '<thead><tr><th>Name</th><th>Phone</th><th>Source</th><th>Assigned</th><th>Received</th><th>Status</th><th>Change</th></tr></thead><tbody>';
+  if(!leads.length){
+    h += '<tr><td colspan="7"><div class="empty">No leads yet. They will appear here automatically when customers message you.</div></td></tr>';
+  }
+  leads.forEach(l => {
+    const m = stMeta(l.status);
+    const member = members.find(x => x.id === l.assigned_to);
+    const opts = STATUSES.map(s => `<option value="${s.key}"${s.key===l.status?' selected':''}>${s.label}</option>`).join('');
+    h += `<tr>
+      <td style="color:#fff;font-weight:600">${esc(l.name || '—')}</td>
+      <td>${esc(l.phone || '—')}</td>
+      <td>${srcIcon[l.source] || ''} ${esc(l.source || '—')}</td>
+      <td>${member ? esc(member.name) : '<span style="color:var(--muted)">unassigned</span>'}</td>
+      <td style="font-size:.74rem;color:var(--muted)">${fmt(l.received_at)}</td>
+      <td><span class="pill ${m.cls}">${m.label}</span></td>
+      <td><select class="st-sel" onchange="changeStatus('${l.id}', this.value, this)">${opts}</select></td>
+    </tr>`;
+  });
+  h += '</tbody>';
+  document.getElementById('leadTable').innerHTML = h;
+}
+
+function esc(s){ return String(s).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+
+// ── STATUS CHANGE (saves to DB) ──
+async function changeStatus(id, val, el){
+  el.disabled = true;
+  const { error } = await sb.from('leads').update({ status: val }).eq('id', id);
+  el.disabled = false;
+
+  if(error){ toast('✕ ' + error.message, true); return; }
+
+  const lead = leads.find(l => l.id === id);
+  if(lead) lead.status = val;
+  renderSummary(); renderTeam(); renderLeads();
+  toast('✓ Status updated');
+}
+
+// ── MEMBER REPORT ──
+function openMember(id){
+  const m = members.find(x => x.id === id);
+  if(!m) return;
+  const ml = leads.filter(l => l.assigned_to === id);
+  const n = s => ml.filter(l => l.status === s).length;
+
+  const closed = n('closed');
+  const answered = ml.length - n('notpicked');
+  const closeRate = ml.length ? Math.round(closed / ml.length * 100) : 0;
+  const pickRate  = ml.length ? Math.round(answered / ml.length * 100) : 0;
+
+  let h = `<div class="mr-head">
+    <div class="mr-av">${m.name[0].toUpperCase()}</div>
+    <div><div class="mr-nm">${esc(m.name)}</div>
+    <div class="mr-sub">${ml.length} leads assigned · ${closeRate}% close rate</div></div>
+  </div>`;
+
+  h += `<div class="mr-stats">
+    <div class="mr-st"><div class="mr-v">${ml.length}</div><div class="mr-l">Total Leads</div></div>
+    <div class="mr-st"><div class="mr-v" style="color:var(--green)">${closed}</div><div class="mr-l">✅ Closed</div></div>
+    <div class="mr-st"><div class="mr-v">${answered}</div><div class="mr-l">📞 Received</div></div>
+    <div class="mr-st"><div class="mr-v" style="color:#9aa">${n('notpicked')}</div><div class="mr-l">📵 Not Received</div></div>
+    <div class="mr-st"><div class="mr-v" style="color:var(--green)">${n('interested')}</div><div class="mr-l">👍 Interested</div></div>
+    <div class="mr-st"><div class="mr-v" style="color:var(--red)">${n('notint')}</div><div class="mr-l">👎 Not Interested</div></div>
+    <div class="mr-st"><div class="mr-v" style="color:var(--yellow)">${n('followup')}</div><div class="mr-l">🔁 Follow Up</div></div>
+    <div class="mr-st"><div class="mr-v">${pickRate}%</div><div class="mr-l">Pick-up Rate</div></div>
+  </div>`;
+
+  h += `<div class="mr-sec">Full Lead Details</div><div class="scroll"><table class="mr-table">
+    <thead><tr><th>Lead</th><th>Phone</th><th>Source</th><th>Received</th><th>Called</th><th>Status</th><th>Note</th></tr></thead><tbody>`;
+  if(!ml.length){
+    h += '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1.2rem">No leads assigned yet</td></tr>';
+  }
+  ml.forEach(l => {
+    const s = stMeta(l.status);
+    h += `<tr>
+      <td style="color:#fff;font-weight:600">${esc(l.name || '—')}</td>
+      <td>${esc(l.phone || '—')}</td>
+      <td>${srcIcon[l.source] || ''} ${esc(l.source || '—')}</td>
+      <td style="font-size:.73rem;color:var(--muted)">${fmt(l.received_at)}</td>
+      <td style="font-size:.73rem;color:var(--muted)">${fmt(l.called_at)}</td>
+      <td><span class="pill ${s.cls}">${s.label}</span></td>
+      <td style="font-size:.75rem;color:var(--muted)">${esc(l.note || '—')}</td>
+    </tr>`;
+  });
+  h += '</tbody></table></div>';
+
+  document.getElementById('memberBody').innerHTML = h;
+  document.getElementById('memberOverlay').classList.add('on');
+}
+function closeMember(){ document.getElementById('memberOverlay').classList.remove('on'); }
+
+async function logout(){
+  await sb.auth.signOut();
+  window.location.href = 'index.html';
+}
+
+init();
+</script>
+</body>
+</html>
