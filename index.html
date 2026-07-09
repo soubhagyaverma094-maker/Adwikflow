@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdwikFlow — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#07080F;--surface:#0E1020;--card:#131629;--border:rgba(255,255,255,0.08);--accent:#5B5FFF;--accent2:#A259FF;--green:#00E5A0;--red:#FF5C7A;--muted:#7B80A8;--text:#E8EAF6;--grad:linear-gradient(135deg,#5B5FFF,#A259FF)}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.2rem;position:relative;overflow:hidden}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none}
+.orb1{width:420px;height:420px;background:rgba(91,95,255,.16);top:-140px;left:-100px}
+.orb2{width:340px;height:340px;background:rgba(162,89,255,.13);bottom:-100px;right:-80px}
+.box{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:2.2rem;max-width:400px;width:100%;position:relative;z-index:1;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;color:#fff;text-align:center;margin-bottom:.3rem}
+.logo span{color:var(--accent)}
+.tag{text-align:center;color:var(--muted);font-size:.84rem;margin-bottom:1.8rem}
+.tabs{display:flex;gap:.4rem;margin-bottom:1.5rem;background:var(--card);border-radius:9px;padding:.25rem}
+.tab{flex:1;padding:.55rem;border-radius:7px;font-size:.84rem;font-weight:600;color:var(--muted);cursor:pointer;text-align:center;border:none;background:none;transition:.2s}
+.tab.active{background:var(--surface);color:#fff}
+.fg{margin-bottom:1rem}
+label{display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem;letter-spacing:.05em}
+input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:.7rem 1rem;color:var(--text);font-size:.88rem;outline:none;transition:border-color .2s;font-family:inherit}
+input:focus{border-color:var(--accent)}
+input::placeholder{color:var(--muted)}
+.btn{width:100%;background:var(--grad);color:#fff;border:none;padding:.85rem;border-radius:10px;font-weight:700;font-size:.92rem;cursor:pointer;margin-top:.5rem;box-shadow:0 6px 24px rgba(91,95,255,.35);transition:.2s}
+.btn:hover{transform:translateY(-1px)}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.msg{margin-top:1rem;padding:.7rem .9rem;border-radius:8px;font-size:.82rem;line-height:1.5;display:none}
+.msg.err{background:rgba(255,92,122,.1);border:1px solid rgba(255,92,122,.3);color:var(--red);display:block}
+.msg.ok{background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.3);color:var(--green);display:block}
+.msg.info{background:rgba(91,95,255,.08);border:1px solid rgba(91,95,255,.25);color:#A0A4FF;display:block}
+.hint{text-align:center;font-size:.76rem;color:var(--muted);margin-top:1.2rem;line-height:1.6}
+.setup-warn{background:rgba(255,185,48,.1);border:1px solid rgba(255,185,48,.3);color:#FFB930;padding:.9rem;border-radius:9px;font-size:.8rem;line-height:1.6;margin-bottom:1.4rem}
+code{background:rgba(0,0,0,.35);padding:.1rem .35rem;border-radius:4px;font-size:.94em}
+/* logged in state */
+.done{text-align:center;padding:1rem 0}
+.done-ic{width:64px;height:64px;background:rgba(0,229,160,.12);border:2px solid var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.7rem;margin:0 auto 1.1rem}
+.done-t{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:.4rem}
+.done-s{color:var(--muted);font-size:.86rem;margin-bottom:1.4rem;line-height:1.6}
+.info-row{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:.7rem .9rem;margin-bottom:.5rem;display:flex;justify-content:space-between;font-size:.8rem}
+.info-row span:first-child{color:var(--muted)}
+.info-row span:last-child{color:#fff;font-weight:600}
+.btn-out{width:100%;background:var(--card);color:var(--muted);border:1px solid var(--border);padding:.7rem;border-radius:9px;font-weight:600;font-size:.85rem;cursor:pointer;margin-top:.6rem}
+.btn-out:hover{color:#fff}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div><div class="orb orb2"></div>
+
+<div class="box">
+  <div class="logo">Adwik<span>Flow</span></div>
+  <div class="tag">Sign in to your workspace</div>
+
+  <div id="setupWarn" class="setup-warn" style="display:none">
+    ⚠️ <b>Setup:</b> Neeche code mein <code>SUPABASE_URL</code> aur <code>SUPABASE_KEY</code> apni values se replace karo.
+  </div>
+
+  <!-- AUTH FORM -->
+  <div id="authView">
+    <div class="tabs">
+      <button class="tab active" id="tab-login" onclick="switchTab('login')">Log In</button>
+      <button class="tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+
+    <div class="fg" id="fg-company" style="display:none">
+      <label>Company Name</label>
+      <input id="in-company" placeholder="Shree Furniture">
+    </div>
+    <div class="fg">
+      <label>Email</label>
+      <input id="in-email" type="email" placeholder="you@company.com" autocomplete="email">
+    </div>
+    <div class="fg">
+      <label>Password</label>
+      <input id="in-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')submitAuth()">
+    </div>
+
+    <button class="btn" id="btnSubmit" onclick="submitAuth()">Log In →</button>
+    <div class="msg" id="msg"></div>
+    <div class="hint" id="hint">New here? Sign up and your workspace will be created automatically.</div>
+  </div>
+
+  <!-- LOGGED IN -->
+  <div id="doneView" style="display:none">
+    <div class="done">
+      <div class="done-ic">✓</div>
+      <div class="done-t">You're in!</div>
+      <div class="done-s" id="doneSub">Workspace ready.</div>
+    </div>
+    <div class="info-row"><span>Email</span><span id="sess-email">—</span></div>
+    <div class="info-row"><span>Company</span><span id="sess-company">—</span></div>
+    <div class="info-row"><span>Team</span><span id="sess-team">—</span></div>
+    <div class="info-row"><span>Plan</span><span id="sess-plan">—</span></div>
+    <button class="btn" onclick="window.location.href='dashboard.html'">Open Dashboard →</button>
+    <button class="btn-out" onclick="logout()">Log Out</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  Supabase se copy ki hui values yahan daalo
+// ═══════════════════════════════════════════════
+const SUPABASE_URL = 'https://jytgogooniceczmukjyy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_sYReBaX4jW9Vgzfut0ZVxw_TYmMif41';
+// ═══════════════════════════════════════════════
+
+const configured = !SUPABASE_URL.includes('YOUR-PROJECT');
+let sb = null;
+if (configured) {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+} else {
+  document.getElementById('setupWarn').style.display = 'block';
+}
+
+let mode = 'login';
+const DEFAULT_TEAM = ['Ravi', 'Amit', 'Sneha', 'Rohit'];
+
+function switchTab(m){
+  mode = m;
+  document.getElementById('tab-login').classList.toggle('active', m==='login');
+  document.getElementById('tab-signup').classList.toggle('active', m==='signup');
+  document.getElementById('fg-company').style.display = m==='signup' ? 'block' : 'none';
+  document.getElementById('btnSubmit').textContent = m==='signup' ? 'Create Workspace →' : 'Log In →';
+  document.getElementById('hint').textContent = m==='signup'
+    ? 'Your company + team will be created automatically.'
+    : 'New here? Sign up and your workspace will be created automatically.';
+  hideMsg();
+}
+
+function showMsg(text, type){
+  const el = document.getElementById('msg');
+  el.className = 'msg ' + type;
+  el.textContent = text;
+}
+function hideMsg(){ document.getElementById('msg').className = 'msg'; }
+
+async function submitAuth(){
+  if(!configured){ showMsg('Pehle SUPABASE_URL aur SUPABASE_KEY set karo.', 'err'); return; }
+
+  const email = document.getElementById('in-email').value.trim();
+  const pass  = document.getElementById('in-pass').value;
+  const company = document.getElementById('in-company').value.trim();
+
+  if(!email || !pass){ showMsg('Email aur password dono bharo.', 'err'); return; }
+  if(mode==='signup' && !company){ showMsg('Company ka naam daalo.', 'err'); return; }
+  if(pass.length < 6){ showMsg('Password kam se kam 6 characters ka ho.', 'err'); return; }
+
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true;
+  btn.textContent = mode==='signup' ? 'Creating...' : 'Signing in...';
+  hideMsg();
+
+  try {
+    if (mode === 'signup') {
+      const { data, error } = await sb.auth.signUp({ email, password: pass });
+      if (error) throw error;
+
+      // Email confirmation on hai toh session nahi milega
+      if (!data.session) {
+        showMsg('✉️ Email bheja hai — confirm karke wapas login karo.', 'info');
+        btn.disabled = false; btn.textContent = 'Create Workspace →';
+        return;
+      }
+      await bootstrapWorkspace(data.user.id, company);
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if (error) throw error;
+    }
+    await loadSession();
+  } catch (e) {
+    showMsg(prettyError(e.message), 'err');
+    btn.disabled = false;
+    btn.textContent = mode==='signup' ? 'Create Workspace →' : 'Log In →';
+  }
+}
+
+function prettyError(m){
+  if(/invalid login/i.test(m)) return 'Email ya password galat hai.';
+  if(/already registered/i.test(m)) return 'Ye email pehle se registered hai. Log In karo.';
+  if(/rate limit/i.test(m)) return 'Bahut zyada try kiya. Thodi der baad koshish karo.';
+  return m;
+}
+
+// Signup ke baad: company + team members bana do
+async function bootstrapWorkspace(userId, companyName){
+  const { data: comp, error: e1 } = await sb
+    .from('companies')
+    .insert({ name: companyName, owner_id: userId, plan: 'trial' })
+    .select()
+    .single();
+  if (e1) throw e1;
+
+  const rows = DEFAULT_TEAM.map(n => ({ company_id: comp.id, name: n, role: 'agent' }));
+  const { error: e2 } = await sb.from('team_members').insert(rows);
+  if (e2) throw e2;
+
+  // Bot config bhi bana do (khaali)
+  await sb.from('bot_configs').insert({ company_id: comp.id, bot_name: 'Assistant' });
+}
+
+// Session check + info dikhao
+async function loadSession(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session) { showAuth(); return; }
+
+  const { data: comp } = await sb.from('companies').select('*').eq('owner_id', session.user.id).maybeSingle();
+
+  // Agar company nahi hai (purana user), bana do
+  if (!comp) {
+    showMsg('Workspace nahi mila. Sign Up tab se company banao.', 'err');
+    showAuth();
+    return;
+  }
+
+  const { count } = await sb.from('team_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('company_id', comp.id);
+
+  document.getElementById('sess-email').textContent   = session.user.email;
+  document.getElementById('sess-company').textContent = comp.name;
+  document.getElementById('sess-team').textContent    = (count||0) + ' members';
+  document.getElementById('sess-plan').textContent    = comp.plan;
+  document.getElementById('doneSub').textContent      = 'Workspace "' + comp.name + '" is ready.';
+
+  document.getElementById('authView').style.display = 'none';
+  document.getElementById('doneView').style.display = 'block';
+}
+
+function showAuth(){
+  document.getElementById('authView').style.display = 'block';
+  document.getElementById('doneView').style.display = 'none';
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = false;
+  btn.textContent = mode==='signup' ? 'Create Workspace →' : 'Log In →';
+}
+
+async function logout(){
+  await sb.auth.signOut();
+  document.getElementById('in-email').value='';
+  document.getElementById('in-pass').value='';
+  document.getElementById('in-company').value='';
+  hideMsg();
+  showAuth();
+}
+
+// Page load: pehle se logged in ho toh seedha dikhao
+if (configured) loadSession();
+</script>
+</body>
+</html>
