@@ -54,6 +54,22 @@ tr:last-child td{border-bottom:none}
 .s-notint{background:rgba(255,92,122,.15);color:var(--red)}
 .s-followup{background:rgba(255,185,48,.15);color:var(--yellow)}
 .s-closed{background:rgba(0,229,160,.22);color:var(--green);font-weight:700}
+/* priority */
+.prio{display:inline-flex;align-items:center;gap:.3rem;padding:.14rem .5rem;border-radius:100px;font-size:.68rem;font-weight:700}
+.p-hot{background:rgba(255,92,122,.15);color:var(--red)}
+.p-warm{background:rgba(255,185,48,.15);color:var(--yellow)}
+.p-cold{background:rgba(123,128,168,.15);color:#9aa}
+/* score bar */
+.score-wrap{display:flex;align-items:center;gap:.45rem;min-width:76px}
+.score-bar{flex:1;height:5px;background:var(--surface);border-radius:100px;overflow:hidden;min-width:38px}
+.score-fill{height:100%;border-radius:100px;transition:width .3s}
+.score-num{font-size:.72rem;font-weight:700;color:#fff;min-width:20px;text-align:right}
+/* urgency */
+.urg{display:inline-block;padding:.14rem .5rem;border-radius:100px;font-size:.66rem;font-weight:700;white-space:nowrap}
+.u-overdue{background:rgba(255,92,122,.18);color:var(--red)}
+.u-due{background:rgba(255,185,48,.18);color:var(--yellow)}
+.u-upcoming{background:rgba(91,95,255,.15);color:#A0A4FF}
+.repeat-badge{background:rgba(162,89,255,.15);color:#C9A0FF;font-size:.64rem;font-weight:700;padding:.1rem .38rem;border-radius:100px;margin-left:.3rem}
 .st-sel{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:.32rem .5rem;color:var(--text);font-size:.75rem;outline:none;cursor:pointer;font-family:inherit}
 .st-sel:focus{border-color:var(--accent)}
 .st-sel:disabled{opacity:.5}
@@ -97,9 +113,14 @@ tr:last-child td{border-bottom:none}
 
   <div id="content" style="display:none">
     <div class="page-title">Lead Management</div>
-    <div class="page-sub">Leads and statuses update automatically from calls and AI conversations. Read-only.</div>
+    <div class="page-sub">Scores, priorities, and follow-ups are calculated automatically. Read-only.</div>
 
     <div class="grid" id="summary"></div>
+
+    <div class="panel" id="followupPanel" style="display:none">
+      <div class="p-title">⏰ Needs Attention <span class="badge y" id="dueCount">0 pending</span></div>
+      <div class="scroll"><table class="lead-table" id="dueTable"></table></div>
+    </div>
 
     <div class="panel">
       <div class="p-title">Team Performance <span class="badge y">Click a member for full report</span></div>
@@ -141,6 +162,33 @@ const STATUSES = [
 ];
 const stMeta = k => STATUSES.find(s => s.key === k) || STATUSES[0];
 const srcIcon = { WhatsApp:'💬', Email:'📧', SMS:'📱', Website:'🌐' };
+const PRIO = {
+  hot:  { icon:'🔥', label:'Hot',  cls:'p-hot'  },
+  warm: { icon:'🟡', label:'Warm', cls:'p-warm' },
+  cold: { icon:'🔵', label:'Cold', cls:'p-cold' },
+};
+function scoreColor(s){
+  if(s >= 70) return '#FF5C7A';
+  if(s >= 40) return '#FFB930';
+  return '#5B5FFF';
+}
+function scoreCell(score){
+  const s = score || 0;
+  return `<div class="score-wrap"><div class="score-bar"><div class="score-fill" style="width:${s}%;background:${scoreColor(s)}"></div></div><span class="score-num">${s}</span></div>`;
+}
+function prioCell(p){
+  const m = PRIO[p] || PRIO.cold;
+  return `<span class="prio ${m.cls}">${m.icon} ${m.label}</span>`;
+}
+function relTime(ts){
+  if(!ts) return '—';
+  const diff = (new Date(ts) - new Date()) / 3600000; // hours
+  if(diff < -24) return Math.floor(-diff/24) + 'd overdue';
+  if(diff < 0)   return Math.floor(-diff) + 'h overdue';
+  if(diff < 1)   return 'Due now';
+  if(diff < 24)  return 'in ' + Math.floor(diff) + 'h';
+  return 'in ' + Math.floor(diff/24) + 'd';
+}
 
 let company = null, members = [], leads = [];
 
@@ -196,6 +244,7 @@ async function refresh(){
 // ── RENDER ──
 function render(){
   renderSummary();
+  renderFollowups();
   renderTeam();
   renderLeads();
 }
@@ -203,12 +252,14 @@ function render(){
 function renderSummary(){
   const c = { total: leads.length };
   STATUSES.forEach(s => c[s.key] = leads.filter(l => l.status === s.key).length);
+  const hot  = leads.filter(l => l.priority === 'hot').length;
+  const warm = leads.filter(l => l.priority === 'warm').length;
   const cards = [
     { l:'Total Leads',       v:c.total,      s:'auto-captured'    },
+    { l:'🔥 Hot Leads',      v:hot,          s:'score 70+'        },
+    { l:'🟡 Warm Leads',     v:warm,         s:'score 40–69'      },
     { l:'📵 Not Picked',     v:c.notpicked,  s:'call not answered'},
-    { l:'📞 Picked',         v:c.picked,     s:'call answered'    },
     { l:'👍 Interested',     v:c.interested, s:'want to proceed'  },
-    { l:'👎 Not Interested', v:c.notint,     s:'declined'         },
     { l:'🔁 Follow Up',      v:c.followup,   s:'call later'       },
     { l:'✅ Deals Closed',   v:c.closed,     s:'won'              },
   ];
@@ -217,16 +268,54 @@ function renderSummary(){
   ).join('');
 }
 
+function renderFollowups(){
+  const now = new Date();
+  const due = leads
+    .filter(l => l.next_action_at && !['closed','notint'].includes(l.status))
+    .filter(l => new Date(l.next_action_at) <= new Date(now.getTime() + 24*3600000))
+    .sort((a,b) => new Date(a.next_action_at) - new Date(b.next_action_at));
+
+  const panel = document.getElementById('followupPanel');
+  if(!due.length){ panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  const overdue = due.filter(l => new Date(l.next_action_at) < now).length;
+  document.getElementById('dueCount').textContent =
+    due.length + ' pending' + (overdue ? ' · ' + overdue + ' overdue' : '');
+
+  let h = '<thead><tr><th>Lead</th><th>Phone</th><th>Priority</th><th>Score</th><th>Status</th><th>Assigned</th><th>Action Due</th></tr></thead><tbody>';
+  due.forEach(l => {
+    const m = stMeta(l.status);
+    const member = members.find(x => x.id === l.assigned_to);
+    const nd = new Date(l.next_action_at);
+    const cls = nd < new Date(now.getTime() - 24*3600000) ? 'u-overdue'
+              : nd < now ? 'u-due' : 'u-upcoming';
+    h += `<tr>
+      <td style="color:#fff;font-weight:600">${esc(l.name || '—')}${l.contact_count > 1 ? `<span class="repeat-badge">×${l.contact_count}</span>` : ''}</td>
+      <td>${esc(l.phone || '—')}</td>
+      <td>${prioCell(l.priority)}</td>
+      <td>${scoreCell(l.score)}</td>
+      <td><span class="pill ${m.cls}">${m.label}</span></td>
+      <td>${member ? esc(member.name) : '<span style="color:var(--muted)">—</span>'}</td>
+      <td><span class="urg ${cls}">${relTime(l.next_action_at)}</span></td>
+    </tr>`;
+  });
+  h += '</tbody>';
+  document.getElementById('dueTable').innerHTML = h;
+}
+
 function renderTeam(){
-  let h = '<thead><tr><th>Member</th><th>Total</th><th>📵</th><th>📞</th><th>👍</th><th>👎</th><th>🔁</th><th>✅ Closed</th><th></th></tr></thead><tbody>';
+  let h = '<thead><tr><th>Member</th><th>Total</th><th>🔥 Hot</th><th>📵</th><th>📞</th><th>👍</th><th>👎</th><th>🔁</th><th>✅ Closed</th><th></th></tr></thead><tbody>';
   if(!members.length){
-    h += '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1.2rem">No team members</td></tr>';
+    h += '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:1.2rem">No team members</td></tr>';
   }
   members.forEach(m => {
     const ml = leads.filter(l => l.assigned_to === m.id);
     const n = s => ml.filter(l => l.status === s).length;
+    const hot = ml.filter(l => l.priority === 'hot').length;
     h += `<tr class="tp-row" onclick="openMember('${m.id}')">
       <td>${m.name}</td><td>${ml.length}</td>
+      <td style="color:var(--red);font-weight:700">${hot}</td>
       <td>${n('notpicked')}</td><td>${n('picked')}</td>
       <td>${n('interested')}</td><td>${n('notint')}</td><td>${n('followup')}</td>
       <td style="color:var(--green);font-weight:700">${n('closed')}</td>
@@ -238,22 +327,24 @@ function renderTeam(){
 
 function renderLeads(){
   document.getElementById('leadCount').textContent = leads.length + ' leads';
-  let h = '<thead><tr><th>Name</th><th>Phone</th><th>Source</th><th>Assigned</th><th>Received</th><th>Called</th><th>Status</th><th>Note</th></tr></thead><tbody>';
+  const sorted = [...leads].sort((a,b) => (b.score||0) - (a.score||0));
+  let h = '<thead><tr><th>Name</th><th>Phone</th><th>Priority</th><th>Score</th><th>Source</th><th>Assigned</th><th>Received</th><th>Status</th><th>Next Action</th></tr></thead><tbody>';
   if(!leads.length){
-    h += '<tr><td colspan="8"><div class="empty">No leads yet. They will appear here automatically when customers message you.</div></td></tr>';
+    h += '<tr><td colspan="9"><div class="empty">No leads yet. They will appear here automatically when customers contact you.</div></td></tr>';
   }
-  leads.forEach(l => {
+  sorted.forEach(l => {
     const m = stMeta(l.status);
     const member = members.find(x => x.id === l.assigned_to);
     h += `<tr>
-      <td style="color:#fff;font-weight:600">${esc(l.name || '—')}</td>
+      <td style="color:#fff;font-weight:600">${esc(l.name || '—')}${l.contact_count > 1 ? `<span class="repeat-badge">×${l.contact_count}</span>` : ''}</td>
       <td>${esc(l.phone || '—')}</td>
+      <td>${prioCell(l.priority)}</td>
+      <td>${scoreCell(l.score)}</td>
       <td>${srcIcon[l.source] || ''} ${esc(l.source || '—')}</td>
       <td>${member ? esc(member.name) : '<span style="color:var(--muted)">unassigned</span>'}</td>
       <td style="font-size:.74rem;color:var(--muted)">${fmt(l.received_at)}</td>
-      <td style="font-size:.74rem;color:var(--muted)">${fmt(l.called_at)}</td>
       <td><span class="pill ${m.cls}">${m.label}</span></td>
-      <td style="font-size:.75rem;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(l.note || '—')}</td>
+      <td style="font-size:.73rem;color:var(--muted)">${l.next_action_at ? relTime(l.next_action_at) : '—'}</td>
     </tr>`;
   });
   h += '</tbody>';
@@ -273,39 +364,42 @@ function openMember(id){
   const answered = ml.length - n('notpicked');
   const closeRate = ml.length ? Math.round(closed / ml.length * 100) : 0;
   const pickRate  = ml.length ? Math.round(answered / ml.length * 100) : 0;
+  const hot = ml.filter(l => l.priority === 'hot').length;
+  const avgScore = ml.length ? Math.round(ml.reduce((s,l)=>s+(l.score||0),0) / ml.length) : 0;
 
   let h = `<div class="mr-head">
     <div class="mr-av">${m.name[0].toUpperCase()}</div>
     <div><div class="mr-nm">${esc(m.name)}</div>
-    <div class="mr-sub">${ml.length} leads assigned · ${closeRate}% close rate</div></div>
+    <div class="mr-sub">${ml.length} leads assigned · ${closeRate}% close rate · avg score ${avgScore}</div></div>
   </div>`;
 
   h += `<div class="mr-stats">
     <div class="mr-st"><div class="mr-v">${ml.length}</div><div class="mr-l">Total Leads</div></div>
+    <div class="mr-st"><div class="mr-v" style="color:var(--red)">${hot}</div><div class="mr-l">🔥 Hot Leads</div></div>
     <div class="mr-st"><div class="mr-v" style="color:var(--green)">${closed}</div><div class="mr-l">✅ Closed</div></div>
     <div class="mr-st"><div class="mr-v">${answered}</div><div class="mr-l">📞 Received</div></div>
     <div class="mr-st"><div class="mr-v" style="color:#9aa">${n('notpicked')}</div><div class="mr-l">📵 Not Received</div></div>
     <div class="mr-st"><div class="mr-v" style="color:var(--green)">${n('interested')}</div><div class="mr-l">👍 Interested</div></div>
     <div class="mr-st"><div class="mr-v" style="color:var(--red)">${n('notint')}</div><div class="mr-l">👎 Not Interested</div></div>
-    <div class="mr-st"><div class="mr-v" style="color:var(--yellow)">${n('followup')}</div><div class="mr-l">🔁 Follow Up</div></div>
     <div class="mr-st"><div class="mr-v">${pickRate}%</div><div class="mr-l">Pick-up Rate</div></div>
   </div>`;
 
   h += `<div class="mr-sec">Full Lead Details</div><div class="scroll"><table class="mr-table">
-    <thead><tr><th>Lead</th><th>Phone</th><th>Source</th><th>Received</th><th>Called</th><th>Status</th><th>Note</th></tr></thead><tbody>`;
+    <thead><tr><th>Lead</th><th>Phone</th><th>Priority</th><th>Score</th><th>Source</th><th>Received</th><th>Status</th><th>Next Action</th></tr></thead><tbody>`;
   if(!ml.length){
-    h += '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1.2rem">No leads assigned yet</td></tr>';
+    h += '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:1.2rem">No leads assigned yet</td></tr>';
   }
-  ml.forEach(l => {
+  ml.sort((a,b)=>(b.score||0)-(a.score||0)).forEach(l => {
     const s = stMeta(l.status);
     h += `<tr>
-      <td style="color:#fff;font-weight:600">${esc(l.name || '—')}</td>
+      <td style="color:#fff;font-weight:600">${esc(l.name || '—')}${l.contact_count > 1 ? `<span class="repeat-badge">×${l.contact_count}</span>` : ''}</td>
       <td>${esc(l.phone || '—')}</td>
+      <td>${prioCell(l.priority)}</td>
+      <td>${scoreCell(l.score)}</td>
       <td>${srcIcon[l.source] || ''} ${esc(l.source || '—')}</td>
       <td style="font-size:.73rem;color:var(--muted)">${fmt(l.received_at)}</td>
-      <td style="font-size:.73rem;color:var(--muted)">${fmt(l.called_at)}</td>
       <td><span class="pill ${s.cls}">${s.label}</span></td>
-      <td style="font-size:.75rem;color:var(--muted)">${esc(l.note || '—')}</td>
+      <td style="font-size:.73rem;color:var(--muted)">${l.next_action_at ? relTime(l.next_action_at) : '—'}</td>
     </tr>`;
   });
   h += '</tbody></table></div>';
