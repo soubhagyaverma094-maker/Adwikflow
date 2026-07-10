@@ -97,7 +97,7 @@ tr:last-child td{border-bottom:none}
 
   <div id="content" style="display:none">
     <div class="page-title">Lead Management</div>
-    <div class="page-sub">Leads auto-capture from your channels. Click a team member for their full report.</div>
+    <div class="page-sub">Leads and statuses update automatically from calls and AI conversations. Read-only.</div>
 
     <div class="grid" id="summary"></div>
 
@@ -238,22 +238,22 @@ function renderTeam(){
 
 function renderLeads(){
   document.getElementById('leadCount').textContent = leads.length + ' leads';
-  let h = '<thead><tr><th>Name</th><th>Phone</th><th>Source</th><th>Assigned</th><th>Received</th><th>Status</th><th>Change</th></tr></thead><tbody>';
+  let h = '<thead><tr><th>Name</th><th>Phone</th><th>Source</th><th>Assigned</th><th>Received</th><th>Called</th><th>Status</th><th>Note</th></tr></thead><tbody>';
   if(!leads.length){
-    h += '<tr><td colspan="7"><div class="empty">No leads yet. They will appear here automatically when customers message you.</div></td></tr>';
+    h += '<tr><td colspan="8"><div class="empty">No leads yet. They will appear here automatically when customers message you.</div></td></tr>';
   }
   leads.forEach(l => {
     const m = stMeta(l.status);
     const member = members.find(x => x.id === l.assigned_to);
-    const opts = STATUSES.map(s => `<option value="${s.key}"${s.key===l.status?' selected':''}>${s.label}</option>`).join('');
     h += `<tr>
       <td style="color:#fff;font-weight:600">${esc(l.name || '—')}</td>
       <td>${esc(l.phone || '—')}</td>
       <td>${srcIcon[l.source] || ''} ${esc(l.source || '—')}</td>
       <td>${member ? esc(member.name) : '<span style="color:var(--muted)">unassigned</span>'}</td>
       <td style="font-size:.74rem;color:var(--muted)">${fmt(l.received_at)}</td>
+      <td style="font-size:.74rem;color:var(--muted)">${fmt(l.called_at)}</td>
       <td><span class="pill ${m.cls}">${m.label}</span></td>
-      <td><select class="st-sel" onchange="changeStatus('${l.id}', this.value, this)">${opts}</select></td>
+      <td style="font-size:.75rem;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(l.note || '—')}</td>
     </tr>`;
   });
   h += '</tbody>';
@@ -261,20 +261,6 @@ function renderLeads(){
 }
 
 function esc(s){ return String(s).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
-
-// ── STATUS CHANGE (saves to DB) ──
-async function changeStatus(id, val, el){
-  el.disabled = true;
-  const { error } = await sb.from('leads').update({ status: val }).eq('id', id);
-  el.disabled = false;
-
-  if(error){ toast('✕ ' + error.message, true); return; }
-
-  const lead = leads.find(l => l.id === id);
-  if(lead) lead.status = val;
-  renderSummary(); renderTeam(); renderLeads();
-  toast('✓ Status updated');
-}
 
 // ── MEMBER REPORT ──
 function openMember(id){
