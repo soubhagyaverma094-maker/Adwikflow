@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdwikFlow — Settings</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#07080F;--surface:#0E1020;--card:#131629;--border:rgba(255,255,255,0.08);--accent:#5B5FFF;--accent2:#A259FF;--green:#00E5A0;--red:#FF5C7A;--yellow:#FFB930;--muted:#7B80A8;--text:#E8EAF6;--grad:linear-gradient(135deg,#5B5FFF,#A259FF)}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh}
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.4rem;position:sticky;top:0;z-index:50}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;color:#fff}
+.logo span{color:var(--accent)}
+.tb-right{display:flex;align-items:center;gap:.7rem}
+.company-pill{background:rgba(91,95,255,.1);border:1px solid rgba(91,95,255,.25);color:#A0A4FF;padding:.3rem .8rem;border-radius:100px;font-size:.76rem;font-weight:600}
+.btn-out{background:var(--card);color:var(--muted);border:1px solid var(--border);padding:.45rem .9rem;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer}
+.btn-out:hover{color:#fff}
+.wrap{max-width:900px;margin:0 auto;padding:1.6rem 1.2rem}
+.page-title{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:#fff;margin-bottom:.2rem}
+.page-sub{color:var(--muted);font-size:.85rem;margin-bottom:1.6rem}
+.loading{text-align:center;padding:4rem 1rem;color:var(--muted)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;margin:0 auto 1rem;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.3rem;margin-bottom:1.3rem}
+.p-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.94rem;color:#fff;margin-bottom:.4rem}
+.p-hint{color:var(--muted);font-size:.78rem;margin-bottom:1.1rem;line-height:1.6}
+/* team list */
+.member{display:flex;align-items:center;gap:.85rem;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:.8rem 1rem;margin-bottom:.6rem}
+.m-av{width:38px;height:38px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:.95rem;color:#fff;flex-shrink:0}
+.m-body{flex:1;min-width:0}
+.m-name{font-weight:600;font-size:.88rem;color:#fff;background:none;border:none;outline:none;width:100%;font-family:inherit;padding:.1rem 0}
+.m-name:focus{border-bottom:1px solid var(--accent)}
+.m-meta{font-size:.72rem;color:var(--muted);margin-top:.1rem}
+.m-tools{display:flex;gap:.35rem;flex-shrink:0}
+.ico{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center}
+.ico:hover{color:#fff;border-color:var(--accent)}
+.ico.del:hover{color:var(--red);border-color:var(--red)}
+.ico:disabled{opacity:.4;cursor:not-allowed}
+.add-row{display:flex;gap:.6rem;margin-top:.9rem;flex-wrap:wrap}
+.add-row input{flex:1;min-width:160px;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.65rem .9rem;color:var(--text);font-size:.86rem;outline:none;font-family:inherit}
+.add-row input:focus{border-color:var(--accent)}
+.btn{background:var(--grad);color:#fff;border:none;padding:.65rem 1.3rem;border-radius:9px;font-weight:600;font-size:.85rem;cursor:pointer;box-shadow:0 5px 18px rgba(91,95,255,.3)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+/* embed code */
+.code-box{background:#05060c;border:1px solid var(--border);border-radius:10px;padding:1rem;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.74rem;line-height:1.7;color:#c8cae0;overflow-x:auto;white-space:pre;margin-bottom:.8rem}
+.copy-row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.id-pill{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.5rem .85rem;font-family:ui-monospace,monospace;font-size:.74rem;color:var(--accent);flex:1;min-width:200px;overflow-x:auto;white-space:nowrap}
+.link-row{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.8rem}
+.link-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.55rem .95rem;color:var(--text);font-size:.8rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem}
+.link-btn:hover{border-color:var(--accent);color:#fff}
+.toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid rgba(0,229,160,.35);color:var(--green);padding:.7rem 1.2rem;border-radius:10px;font-size:.82rem;font-weight:600;opacity:0;pointer-events:none;transition:.3s;z-index:200}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+.toast.err{border-color:rgba(255,92,122,.35);color:var(--red)}
+.empty{text-align:center;padding:1.8rem 1rem;color:var(--muted);font-size:.84rem}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">Adwik<span>Flow</span></div>
+  <div class="tb-right">
+    <span class="company-pill" id="companyName">—</span>
+    <button class="btn-out" onclick="location.href='dashboard.html'">← Dashboard</button>
+    <button class="btn-out" onclick="logout()">Log Out</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div id="loading" class="loading"><div class="spinner"></div>Loading…</div>
+
+  <div id="content" style="display:none">
+    <div class="page-title">Settings</div>
+    <div class="page-sub">Manage your team and get your lead-capture code.</div>
+
+    <!-- TEAM -->
+    <div class="panel">
+      <div class="p-title">👥 Team Members</div>
+      <div class="p-hint">Leads are auto-assigned to whoever has the fewest. Click a name to rename it.</div>
+      <div id="teamList"></div>
+      <div class="add-row">
+        <input id="newName" placeholder="New member name" onkeydown="if(event.key==='Enter')addMember()">
+        <button class="btn" id="addBtn" onclick="addMember()">+ Add Member</button>
+      </div>
+    </div>
+
+    <!-- LEAD CAPTURE -->
+    <div class="panel">
+      <div class="p-title">🔗 Your Lead Capture Code</div>
+      <div class="p-hint">Paste this on your website, just before <code>&lt;/body&gt;</code>. A floating "Enquire Now" button will appear, and every submission lands in your dashboard.</div>
+
+      <div class="copy-row" style="margin-bottom:1rem">
+        <div class="id-pill" id="companyId">—</div>
+        <button class="btn-out" onclick="copyId()">Copy ID</button>
+      </div>
+
+      <div class="code-box" id="embedCode">Loading…</div>
+      <button class="btn" onclick="copyEmbed()">Copy Embed Code</button>
+
+      <div class="link-row">
+        <a class="link-btn" id="formLink" href="form.html" target="_blank">🌐 Open standalone form</a>
+        <a class="link-btn" href="dashboard.html">📊 View leads</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://jytgogooniceczmukjyy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_sYReBaX4jW9Vgzfut0ZVxw_TYmMif41';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let company = null, members = [], leads = [];
+
+let toastTimer;
+function toast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = 'toast', 2200);
+}
+function esc(s){ return String(s).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ location.href = 'index.html'; return; }
+
+  const { data: comp } = await sb.from('companies').select('*').eq('owner_id', session.user.id).maybeSingle();
+  if(!comp){ document.getElementById('loading').innerHTML = 'No workspace found. <a href="index.html" style="color:var(--accent)">Go back</a>'; return; }
+  company = comp;
+
+  document.getElementById('companyName').textContent = comp.name;
+  document.getElementById('companyId').textContent = comp.id;
+  document.getElementById('formLink').href = 'form.html?c=' + comp.id;
+
+  await loadData();
+  renderEmbed();
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+}
+
+async function loadData(){
+  const [tm, ld] = await Promise.all([
+    sb.from('team_members').select('*').eq('company_id', company.id).eq('active', true).order('created_at'),
+    sb.from('leads').select('id, assigned_to').eq('company_id', company.id),
+  ]);
+  members = tm.data || [];
+  leads   = ld.data || [];
+  renderTeam();
+}
+
+function renderTeam(){
+  const box = document.getElementById('teamList');
+  if(!members.length){
+    box.innerHTML = '<div class="empty">No team members yet. Add one below — leads need someone to go to.</div>';
+    return;
+  }
+  box.innerHTML = members.map(m => {
+    const count = leads.filter(l => l.assigned_to === m.id).length;
+    return `<div class="member">
+      <div class="m-av">${esc(m.name[0].toUpperCase())}</div>
+      <div class="m-body">
+        <input class="m-name" value="${esc(m.name)}" onblur="renameMember('${m.id}', this.value, this)" onkeydown="if(event.key==='Enter')this.blur()">
+        <div class="m-meta">${count} lead${count===1?'':'s'} assigned</div>
+      </div>
+      <div class="m-tools">
+        <button class="ico del" onclick="removeMember('${m.id}', '${esc(m.name)}')" title="Remove">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function addMember(){
+  const inp = document.getElementById('newName');
+  const name = inp.value.trim();
+  if(!name){ toast('Enter a name first', true); return; }
+  if(members.some(m => m.name.toLowerCase() === name.toLowerCase())){ toast('That name already exists', true); return; }
+
+  const btn = document.getElementById('addBtn');
+  btn.disabled = true;
+
+  const { error } = await sb.from('team_members').insert({
+    company_id: company.id, name, role: 'agent', active: true,
+  });
+  btn.disabled = false;
+
+  if(error){ toast('✕ ' + error.message, true); return; }
+  inp.value = '';
+  await loadData();
+  toast('✓ ' + name + ' added');
+}
+
+async function renameMember(id, newName, el){
+  const name = newName.trim();
+  const m = members.find(x => x.id === id);
+  if(!m) return;
+  if(!name){ el.value = m.name; return; }
+  if(name === m.name) return;
+
+  const { error } = await sb.from('team_members').update({ name }).eq('id', id);
+  if(error){ el.value = m.name; toast('✕ ' + error.message, true); return; }
+  m.name = name;
+  await loadData();
+  toast('✓ Renamed to ' + name);
+}
+
+async function removeMember(id, name){
+  const count = leads.filter(l => l.assigned_to === id).length;
+  const warn = count
+    ? `Remove ${name}? Their ${count} lead${count===1?'':'s'} will become unassigned.`
+    : `Remove ${name}?`;
+  if(!confirm(warn)) return;
+
+  // soft delete — leads ka reference bacha rahega
+  const { error } = await sb.from('team_members').update({ active: false }).eq('id', id);
+  if(error){ toast('✕ ' + error.message, true); return; }
+  await loadData();
+  toast('✓ ' + name + ' removed');
+}
+
+function renderEmbed(){
+  const origin = location.origin;
+  const code =
+`<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>
+<script
+  src="${origin}/widget.js"
+  data-company="${company.id}">
+<\/script>`;
+  document.getElementById('embedCode').textContent = code;
+}
+
+function copyId(){
+  navigator.clipboard.writeText(company.id)
+    .then(() => toast('✓ Company ID copied'))
+    .catch(() => toast('Copy failed — select it manually', true));
+}
+function copyEmbed(){
+  navigator.clipboard.writeText(document.getElementById('embedCode').textContent)
+    .then(() => toast('✓ Embed code copied'))
+    .catch(() => toast('Copy failed — select it manually', true));
+}
+
+async function logout(){
+  await sb.auth.signOut();
+  location.href = 'index.html';
+}
+
+init();
+</script>
+</body>
+</html>
