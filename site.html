@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loading…</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#fff;color:#1a1a1a}
+.loading,.err{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;gap:1rem;color:#666;background:#07080F}
+.spinner{width:34px;height:34px;border:3px solid rgba(255,255,255,.15);border-top-color:#5B5FFF;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err h1{font-family:'Syne',sans-serif;color:#fff;font-size:1.4rem}
+.err a{color:#5B5FFF;text-decoration:none}
+/* SITE */
+.s-header{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 6%;flex-wrap:wrap;gap:.6rem;position:sticky;top:0;z-index:20}
+.s-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem}
+.s-nav{display:flex;gap:1.2rem;font-size:.85rem;font-weight:600;flex-wrap:wrap}
+.s-nav a{text-decoration:none;cursor:pointer}
+.s-hero{padding:5rem 6%;text-align:center;color:#fff}
+.s-hero .tag{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;opacity:.9;margin-bottom:.8rem}
+.s-hero h1{font-family:'Syne',sans-serif;font-size:clamp(2rem,6vw,3.4rem);font-weight:800;margin-bottom:.9rem;line-height:1.1}
+.s-hero p{font-size:1rem;opacity:.92;max-width:560px;margin:0 auto 1.6rem;line-height:1.7}
+.s-hero button{border:none;padding:.85rem 2rem;border-radius:9px;font-weight:700;font-size:.95rem;cursor:pointer}
+.s-sec{padding:3.5rem 6%}
+.s-sec h2{font-family:'Syne',sans-serif;font-size:clamp(1.5rem,4vw,2.2rem);font-weight:800;margin-bottom:.6rem}
+.s-sec p{font-size:.95rem;line-height:1.8;color:#555;max-width:640px}
+.s-feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.8rem;margin-top:1.6rem}
+.s-feat{padding:1rem;border-radius:10px;font-size:.9rem;font-weight:600;text-align:center;border:1px solid rgba(0,0,0,.08)}
+.s-gal{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-top:1.6rem}
+.s-gal .g{height:140px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2rem;color:#fff}
+.s-contact-row{display:flex;align-items:center;gap:.7rem;padding:1rem;border-radius:10px;border:1px solid rgba(0,0,0,.08);margin-bottom:.6rem;font-size:.95rem;max-width:460px}
+.s-footer{padding:3rem 6%;text-align:center;color:#fff}
+.s-footer .fl{font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;margin-bottom:.5rem}
+.s-footer .fi{font-size:.9rem;opacity:.9;margin-bottom:1rem}
+.s-footer button{border:none;padding:.7rem 1.6rem;border-radius:8px;font-weight:700;font-size:.9rem;cursor:pointer}
+.s-copy{padding:1.2rem;text-align:center;font-size:.75rem;color:#999;border-top:1px solid rgba(0,0,0,.08)}
+.badge-adwik{position:fixed;bottom:12px;right:12px;background:#0E1020;color:#7B80A8;font-size:.68rem;padding:.4rem .7rem;border-radius:100px;text-decoration:none;border:1px solid rgba(255,255,255,.1);z-index:50}
+.pg-nav{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;padding:1rem 6%}
+.pg-nav button{background:none;border:1px solid rgba(0,0,0,.12);padding:.4rem .9rem;border-radius:100px;font-size:.8rem;font-weight:600;cursor:pointer}
+.pg-nav button.on{color:#fff}
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading"><div class="spinner"></div><div>Loading website…</div></div>
+<div class="err" id="err" style="display:none">
+  <h1>Website not found</h1>
+  <p style="color:#7B80A8">This site may be unpublished or the link is incorrect.</p>
+  <a href="index.html">Go to AdwikFlow →</a>
+</div>
+<div id="site" style="display:none"></div>
+<a class="badge-adwik" id="badge" href="index.html" style="display:none">⚡ Built with AdwikFlow</a>
+
+<script>
+const SUPABASE_URL = 'https://jytgogooniceczmukjyy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_sYReBaX4jW9Vgzfut0ZVxw_TYmMif41';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let data=null, curPage=0;
+
+function esc(s){return String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));}
+
+async function load(){
+  const params=new URLSearchParams(location.search);
+  const slug=params.get('s');
+  if(!slug){ showErr(); return; }
+
+  const { data:site, error } = await sb.from('websites').select('site_data,name,published').eq('slug',slug).eq('published',true).maybeSingle();
+  if(error || !site || !site.site_data || !site.site_data.pages){ showErr(); return; }
+
+  data=site.site_data;
+  document.title=data.logo||site.name||'Website';
+  document.getElementById('loading').style.display='none';
+  document.getElementById('site').style.display='block';
+  document.getElementById('badge').style.display='block';
+  render();
+}
+
+function showErr(){
+  document.getElementById('loading').style.display='none';
+  document.getElementById('err').style.display='flex';
+}
+
+function render(){
+  const accent=(data.theme&&data.theme.accent)||'#5B5FFF';
+  const dark=(data.theme&&data.theme.bg)==='dark';
+  const bg=dark?'#14151f':'#fff',txt=dark?'#e8eaf6':'#1a1a1a',mut=dark?'#aab':'#666',cardBg=dark?'#1e2030':'#f7f8fc';
+  const gc=[accent,'#FF6B6B','#5B5FFF','#00C2A8','#FFB930','#A259FF'];
+  const page=data.pages[curPage]||data.pages[0];
+  const f=data.footer||{};
+
+  let h='<div style="background:'+bg+';color:'+txt+'">';
+  // header
+  h+='<div class="s-header" style="background:'+bg+';border-bottom:1px solid rgba(0,0,0,.06)"><div class="s-logo" style="color:'+accent+'">'+esc(data.logo||'Brand')+'</div><div class="s-nav">'+(data.links||[]).map((l,i)=>'<a style="color:'+mut+'" onclick="goPage('+findPageByName(l)+')">'+esc(l)+'</a>').join('')+'</div></div>';
+
+  // page switcher (if multiple pages)
+  if(data.pages.length>1){
+    h+='<div class="pg-nav">'+data.pages.map((p,i)=>'<button class="'+(i===curPage?'on':'')+'" style="'+(i===curPage?'background:'+accent+';border-color:'+accent:'color:'+txt)+'" onclick="goPage('+i+')">'+esc(p.name)+'</button>').join('')+'</div>';
+  }
+
+  page.sections.forEach(s=>{
+    if(s.type==='hero')h+='<div class="s-hero" style="background:linear-gradient(135deg,'+accent+','+accent+'cc)"><div class="tag">'+esc(s.tag||'')+'</div><h1>'+esc(s.title||'')+'</h1><p>'+esc(s.text||'')+'</p>'+(s.btn?'<button style="background:#fff;color:'+accent+'">'+esc(s.btn)+' →</button>':'')+'</div>';
+    else if(s.type==='about')h+='<div class="s-sec" style="background:'+bg+'"><h2 style="color:'+txt+'">'+esc(s.title||'')+'</h2><p style="color:'+mut+'">'+esc(s.text||'')+'</p></div>';
+    else if(s.type==='services'){const it=['Custom Design','Consultation','Installation','After-Sales'];h+='<div class="s-sec" style="background:'+cardBg+'"><h2 style="color:'+txt+'">'+esc(s.title||'')+'</h2><p style="color:'+mut+'">'+esc(s.text||'')+'</p><div class="s-feats">'+it.map(x=>'<div class="s-feat" style="background:'+bg+';color:'+txt+'">✓ '+x+'</div>').join('')+'</div></div>';}
+    else if(s.type==='gallery'){const g=['Living','Kitchens','Office','Wardrobes','Dining','Outdoor'];h+='<div class="s-sec" style="background:'+bg+'"><h2 style="color:'+txt+'">'+esc(s.title||'')+'</h2><p style="color:'+mut+'">'+esc(s.text||'')+'</p><div class="s-gal">'+g.map((x,i)=>'<div class="g" style="background:linear-gradient(135deg,'+gc[i%6]+'bb,'+gc[(i+2)%6]+'88)">🖼️</div>').join('')+'</div></div>';}
+    else if(s.type==='contact'){h+='<div class="s-sec" style="background:'+cardBg+'"><h2 style="color:'+txt+'">'+esc(s.title||'')+'</h2><p style="color:'+mut+';margin-bottom:1rem">'+esc(s.text||'')+'</p><div class="s-contact-row" style="background:'+bg+';color:'+txt+'">📍 <span>'+esc(f.addr||'')+'</span></div><div class="s-contact-row" style="background:'+bg+';color:'+txt+'">📞 <span>'+esc(f.phone||'')+'</span></div></div>';}
+    else if(s.type==='cta')h+='<div class="s-hero" style="background:'+cardBg+';color:'+txt+';padding:3rem 6%"><h1 style="font-size:1.7rem;color:'+txt+'">'+esc(s.title||'')+'</h1><p style="color:'+mut+'">'+esc(s.text||'')+'</p>'+(s.btn?'<button style="background:'+accent+';color:#fff">'+esc(s.btn)+' →</button>':'')+'</div>';
+  });
+
+  // footer
+  h+='<div class="s-footer" style="background:linear-gradient(135deg,'+accent+','+accent+'cc)"><div class="fl">'+esc(f.fname||data.logo||'')+'</div><div class="fi">📍 '+esc(f.addr||'')+' · 📞 '+esc(f.phone||'')+'</div>'+(f.fbtn?'<button style="background:#fff;color:'+accent+'">'+esc(f.fbtn)+' →</button>':'')+'</div><div class="s-copy" style="background:'+bg+';color:'+mut+'">'+esc(f.copy||'')+'</div>';
+  h+='</div>';
+  document.getElementById('site').innerHTML=h;
+  window.scrollTo(0,0);
+}
+
+function findPageByName(name){const i=data.pages.findIndex(p=>p.name===name);return i>=0?i:0;}
+function goPage(i){curPage=i;render();}
+
+load();
+</script>
+</body>
+</html>
