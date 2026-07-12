@@ -74,6 +74,20 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid rgba(0,229,160,.35);color:var(--green);padding:.7rem 1.2rem;border-radius:10px;font-size:.82rem;font-weight:600;opacity:0;pointer-events:none;transition:.3s;z-index:600}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
 .toast.err{border-color:rgba(255,92,122,.35);color:var(--red)}
+.pub-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);z-index:700;display:none;align-items:center;justify-content:center;padding:1rem}
+.pub-box{background:var(--surface);border:1px solid rgba(91,95,255,.3);border-radius:18px;max-width:440px;width:100%;padding:2rem;text-align:center;animation:pop .3s ease}
+@keyframes pop{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+.pub-emoji{font-size:2.4rem;margin-bottom:.6rem}
+.pub-title{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;color:#fff;margin-bottom:.3rem}
+.pub-sub{color:var(--muted);font-size:.86rem;margin-bottom:1.4rem}
+.pub-url-row{display:flex;gap:.5rem;margin-bottom:1rem}
+.pub-url-row input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:.65rem .8rem;color:var(--text);font-size:.82rem;outline:none}
+.pub-copy{background:var(--grad);color:#fff;border:none;border-radius:9px;padding:.65rem 1.1rem;font-weight:700;font-size:.82rem;cursor:pointer}
+.pub-actions{display:flex;gap:.6rem}
+.pub-open{flex:1;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:.7rem;font-weight:600;font-size:.85rem;text-decoration:none;display:flex;align-items:center;justify-content:center}
+.pub-open:hover{border-color:var(--accent);color:#fff}
+.pub-close{flex:1;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:9px;padding:.7rem;font-weight:600;font-size:.85rem;cursor:pointer}
+.pub-close:hover{color:#fff}
 @media(max-width:800px){.blayout{grid-template-columns:1fr;grid-template-rows:auto 1fr}.panel{max-height:46vh}}
 </style>
 </head>
@@ -137,6 +151,22 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
       </div>
     </div>
     <div class="pv-wrap"><div class="site" id="site"></div></div>
+  </div>
+</div>
+
+<div class="pub-overlay" id="publishModal" onclick="if(event.target===this)closePublishModal()">
+  <div class="pub-box">
+    <div class="pub-emoji">🎉</div>
+    <div class="pub-title">Your website is live!</div>
+    <div class="pub-sub">Share this link with your customers.</div>
+    <div class="pub-url-row">
+      <input id="pubUrl" readonly>
+      <button class="pub-copy" onclick="copyPubLink()">Copy</button>
+    </div>
+    <div class="pub-actions">
+      <a id="pubOpen" class="pub-open" target="_blank" rel="noopener">Open site ↗</a>
+      <button class="pub-close" onclick="closePublishModal()">Done</button>
+    </div>
   </div>
 </div>
 
@@ -268,7 +298,7 @@ async function saveSite(){
   }
 }
 
-/* ─── PUBLISH (Phase 2 — abhi slug set + published flag) ─── */
+/* ─── PUBLISH — slug set + published flag + show live link ─── */
 async function publishSite(){
   collect();
   if(!websiteId){ await saveSite(); if(!websiteId) return; }
@@ -276,16 +306,34 @@ async function publishSite(){
   try{
     const { error } = await sb.from('websites').update({ slug:slug, published:true, site_data:data, updated_at:new Date().toISOString() }).eq('id',websiteId);
     if(error){
-      // slug may already be taken — append short id
+      // slug may already be taken by another company — append short id
       slug=slug+'-'+websiteId.slice(0,4);
       const { error:e2 } = await sb.from('websites').update({ slug:slug, published:true, site_data:data }).eq('id',websiteId);
       if(e2) throw e2;
     }
     dirty=false; updateSaveStatus();
-    toast('🎉 Published! Pages: '+data.pages.length);
+    showPublishModal(slug);
   }catch(e){
     console.error(e);
     toast('Publish failed: '+(e.message||'error'), true);
+  }
+}
+
+function showPublishModal(slug){
+  const url = location.origin + '/site.html?s=' + slug;
+  const m = document.getElementById('publishModal');
+  document.getElementById('pubUrl').value = url;
+  document.getElementById('pubOpen').href = url;
+  m.style.display='flex';
+}
+function closePublishModal(){ document.getElementById('publishModal').style.display='none'; }
+async function copyPubLink(){
+  const inp=document.getElementById('pubUrl');
+  try{
+    await navigator.clipboard.writeText(inp.value);
+    toast('✓ Link copied');
+  }catch(e){
+    inp.select(); document.execCommand('copy'); toast('✓ Link copied');
   }
 }
 
