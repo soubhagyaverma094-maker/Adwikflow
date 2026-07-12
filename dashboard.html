@@ -1,4 +1,4 @@
-DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -17,19 +17,19 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .company-pill{background:rgba(91,95,255,.1);border:1px solid rgba(91,95,255,.25);color:#A0A4FF;padding:.3rem .8rem;border-radius:100px;font-size:.76rem;font-weight:600}
 .btn-out{background:var(--card);color:var(--muted);border:1px solid var(--border);padding:.45rem .9rem;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer}
 .btn-out:hover{color:#fff}
+.btn-builder{background:rgba(91,95,255,.12);border-color:rgba(91,95,255,.3);color:#A0A4FF}
+.btn-builder:hover{color:#fff;border-color:var(--accent)}
 .wrap{max-width:1200px;margin:0 auto;padding:1.6rem 1.2rem}
 .page-title{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:#fff;margin-bottom:.2rem}
 .page-sub{color:var(--muted);font-size:.85rem;margin-bottom:1.6rem}
 .loading{text-align:center;padding:4rem 1rem;color:var(--muted)}
 .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;margin:0 auto 1rem;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* summary */
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:.75rem;margin-bottom:1.5rem}
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem}
 .c-lbl{color:var(--muted);font-size:.7rem;font-weight:600;text-transform:uppercase;margin-bottom:.4rem;letter-spacing:.02em}
 .c-val{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:#fff;line-height:1}
 .c-sub{color:var(--muted);font-size:.68rem;margin-top:.25rem}
-/* panels */
 .panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.3rem;margin-bottom:1.3rem}
 .p-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.94rem;color:#fff;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap}
 .badge{background:rgba(0,229,160,.12);color:var(--green);font-size:.68rem;font-weight:600;padding:.2rem .6rem;border-radius:100px}
@@ -46,7 +46,6 @@ tr:last-child td{border-bottom:none}
 .tp-row{cursor:pointer;transition:background .2s}
 .tp-row:hover{background:rgba(91,95,255,.06)}
 .lead-table{min-width:760px}
-/* status */
 .pill{display:inline-block;padding:.16rem .55rem;border-radius:100px;font-size:.7rem;font-weight:600;white-space:nowrap}
 .s-notpicked{background:rgba(123,128,168,.18);color:#9aa}
 .s-picked{background:rgba(91,95,255,.15);color:#A0A4FF}
@@ -54,17 +53,14 @@ tr:last-child td{border-bottom:none}
 .s-notint{background:rgba(255,92,122,.15);color:var(--red)}
 .s-followup{background:rgba(255,185,48,.15);color:var(--yellow)}
 .s-closed{background:rgba(0,229,160,.22);color:var(--green);font-weight:700}
-/* priority */
 .prio{display:inline-flex;align-items:center;gap:.3rem;padding:.14rem .5rem;border-radius:100px;font-size:.68rem;font-weight:700}
 .p-hot{background:rgba(255,92,122,.15);color:var(--red)}
 .p-warm{background:rgba(255,185,48,.15);color:var(--yellow)}
 .p-cold{background:rgba(123,128,168,.15);color:#9aa}
-/* score bar */
 .score-wrap{display:flex;align-items:center;gap:.45rem;min-width:76px}
 .score-bar{flex:1;height:5px;background:var(--surface);border-radius:100px;overflow:hidden;min-width:38px}
 .score-fill{height:100%;border-radius:100px;transition:width .3s}
 .score-num{font-size:.72rem;font-weight:700;color:#fff;min-width:20px;text-align:right}
-/* urgency */
 .urg{display:inline-block;padding:.14rem .5rem;border-radius:100px;font-size:.66rem;font-weight:700;white-space:nowrap}
 .u-overdue{background:rgba(255,92,122,.18);color:var(--red)}
 .u-due{background:rgba(255,185,48,.18);color:var(--yellow)}
@@ -77,7 +73,6 @@ tr:last-child td{border-bottom:none}
 .toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid rgba(0,229,160,.35);color:var(--green);padding:.7rem 1.2rem;border-radius:10px;font-size:.82rem;font-weight:600;opacity:0;pointer-events:none;transition:.3s;z-index:200}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
 .toast.err{border-color:rgba(255,92,122,.35);color:var(--red)}
-/* member modal */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);z-index:150;display:none;align-items:center;justify-content:center;padding:1rem}
 .overlay.on{display:flex}
 .modal{background:var(--surface);border:1px solid rgba(91,95,255,.3);border-radius:18px;max-width:720px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;position:relative;animation:pop .3s ease}
@@ -103,6 +98,7 @@ tr:last-child td{border-bottom:none}
   <div class="logo">Adwik<span>Flow</span></div>
   <div class="tb-right">
     <span class="company-pill" id="companyName">—</span>
+    <button class="btn-out btn-builder" onclick="location.href='builder.html'">🌐 Website Builder</button>
     <button class="btn-out" onclick="refresh()">↻ Refresh</button>
     <button class="btn-out" onclick="logout()">Log Out</button>
   </div>
@@ -134,7 +130,6 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
-<!-- MEMBER REPORT -->
 <div class="overlay" id="memberOverlay" onclick="if(event.target===this)closeMember()">
   <div class="modal">
     <button class="m-close" onclick="closeMember()">✕</button>
@@ -145,11 +140,8 @@ tr:last-child td{border-bottom:none}
 <div class="toast" id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════
 const SUPABASE_URL = 'https://jytgogooniceczmukjyy.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_sYReBaX4jW9Vgzfut0ZVxw_TYmMif41';
-// ═══════════════════════════════════════════════
-
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const STATUSES = [
@@ -182,7 +174,7 @@ function prioCell(p){
 }
 function relTime(ts){
   if(!ts) return '—';
-  const diff = (new Date(ts) - new Date()) / 3600000; // hours
+  const diff = (new Date(ts) - new Date()) / 3600000;
   if(diff < -24) return Math.floor(-diff/24) + 'd overdue';
   if(diff < 0)   return Math.floor(-diff) + 'h overdue';
   if(diff < 1)   return 'Due now';
@@ -192,7 +184,6 @@ function relTime(ts){
 
 let company = null, members = [], leads = [];
 
-// ── TIME FORMAT ──
 function fmt(ts){
   if(!ts) return '—';
   const d = new Date(ts);
@@ -200,7 +191,6 @@ function fmt(ts){
          d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
 }
 
-// ── TOAST ──
 let toastTimer;
 function toast(msg, isErr){
   const t = document.getElementById('toast');
@@ -210,7 +200,6 @@ function toast(msg, isErr){
   toastTimer = setTimeout(() => t.className = 'toast', 2200);
 }
 
-// ── LOAD ──
 async function init(){
   const { data:{ session } } = await sb.auth.getSession();
   if(!session){ window.location.href = 'index.html'; return; }
@@ -241,7 +230,6 @@ async function refresh(){
   toast('✓ Refreshed');
 }
 
-// ── RENDER ──
 function render(){
   renderSummary();
   renderFollowups();
@@ -353,7 +341,6 @@ function renderLeads(){
 
 function esc(s){ return String(s).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
 
-// ── MEMBER REPORT ──
 function openMember(id){
   const m = members.find(x => x.id === id);
   if(!m) return;
