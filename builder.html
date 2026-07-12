@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdwikFlow — Website Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#07080F;--surface:#0E1020;--card:#131629;--border:rgba(255,255,255,0.08);--accent:#5B5FFF;--accent2:#A259FF;--green:#00E5A0;--red:#FF5C7A;--yellow:#FFB930;--text:#E8EAF6;--muted:#7B80A8;--grad:linear-gradient(135deg,#5B5FFF,#A259FF)}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;height:100vh;overflow:hidden}
+.loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;gap:1rem}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.topbar{height:54px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.1rem}
+.tb-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:.98rem;color:#fff}.tb-logo span{color:var(--accent)}
+.tb-actions{display:flex;gap:.5rem;align-items:center}
+.btn{border:none;border-radius:8px;font-weight:600;font-size:.78rem;cursor:pointer;padding:.5rem .95rem}
+.btn-g{background:var(--grad);color:#fff}.btn-o{background:var(--card);color:var(--muted);border:1px solid var(--border)}.btn-o:hover{color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.welcome-bar{background:rgba(0,229,160,.08);border-bottom:1px solid rgba(0,229,160,.2);padding:.5rem 1.1rem;font-size:.78rem;color:var(--green);display:flex;justify-content:space-between;align-items:center}
+.save-status{font-size:.72rem;color:var(--muted)}
+.blayout{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 54px - 33px)}
+.panel{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:1rem}
+.pv-wrap{background:#1a1c2e;overflow-y:auto;padding:1.4rem;display:flex;justify-content:center}
+.page-tabs{display:flex;gap:.35rem;margin-bottom:.9rem;flex-wrap:wrap;align-items:center}
+.page-tab{padding:.4rem .7rem;background:var(--card);border:1px solid var(--border);border-radius:7px;font-size:.72rem;font-weight:600;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:.35rem}
+.page-tab.active{background:rgba(91,95,255,.15);color:#fff;border-color:var(--accent)}
+.page-tab .x{opacity:.5;font-size:.7rem}.page-tab .x:hover{opacity:1;color:var(--red)}
+.add-page-btn{padding:.4rem .6rem;background:transparent;border:1px dashed var(--border);border-radius:7px;font-size:.72rem;color:var(--accent);cursor:pointer}
+.tabs{display:flex;gap:.35rem;margin-bottom:1rem;flex-wrap:wrap}
+.tab{flex:1;min-width:0;padding:.5rem;background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:.7rem;font-weight:600;color:var(--muted);cursor:pointer;text-align:center}
+.tab.active{background:rgba(91,95,255,.15);color:#fff;border-color:var(--accent)}
+.pgroup{display:none}.pgroup.active{display:block}
+.field{margin-bottom:.85rem}
+.field label{display:block;font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem}
+.field input,.field textarea,.field select{width:100%;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:.5rem .7rem;color:var(--text);font-size:.8rem;outline:none;font-family:inherit}
+.field input:focus,.field textarea:focus{border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:55px}
+.sec-block{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.75rem;margin-bottom:.65rem}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.55rem}
+.sname{font-weight:700;font-size:.8rem;color:#fff}.stools{display:flex;gap:.28rem}
+.icon-btn{width:25px;height:25px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:.72rem;display:flex;align-items:center;justify-content:center}
+.icon-btn:hover{color:#fff;border-color:var(--accent)}.icon-btn.del:hover{color:var(--red);border-color:var(--red)}
+.add-menu{display:grid;grid-template-columns:1fr 1fr;gap:.45rem;margin-top:.5rem}
+.add-item{background:var(--card);border:1px dashed var(--border);border-radius:8px;padding:.55rem;font-size:.74rem;cursor:pointer;text-align:center}
+.add-item:hover{border-color:var(--accent);color:#fff;background:rgba(91,95,255,.06)}
+.plabel{font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--accent);margin:1.1rem 0 .5rem}
+.hint{font-size:.72rem;color:var(--muted);margin-bottom:.7rem}
+.link-row{display:flex;gap:.4rem;margin-bottom:.4rem}.link-row input{flex:1}
+.site{width:100%;max-width:400px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);align-self:flex-start}
+.pv-header{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.05rem}
+.pv-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:.95rem}
+.pv-nav{display:flex;gap:.6rem;font-size:.64rem;font-weight:600;flex-wrap:wrap}
+.pv-hero{padding:2.2rem 1.1rem;text-align:center}
+.pv-hero .tag{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;opacity:.85;margin-bottom:.5rem}
+.pv-hero h1{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;margin-bottom:.5rem}
+.pv-hero p{font-size:.74rem;opacity:.9;max-width:280px;margin:0 auto .85rem;line-height:1.6}
+.pv-hero button{border:none;padding:.55rem 1.2rem;border-radius:7px;font-weight:700;font-size:.72rem;cursor:pointer}
+.pv-sec{padding:1.7rem 1.1rem}
+.pv-sec h2{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;margin-bottom:.4rem}
+.pv-sec p{font-size:.74rem;line-height:1.7;color:#555}
+.pv-feats{display:grid;grid-template-columns:1fr 1fr;gap:.45rem;margin-top:.75rem}
+.pv-feat{padding:.65rem;border-radius:8px;font-size:.7rem;font-weight:600;text-align:center;border:1px solid rgba(0,0,0,.08)}
+.pv-gal{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:.75rem}
+.pv-gal .g{height:66px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.15rem}
+.pv-contact-row{display:flex;align-items:center;gap:.55rem;padding:.65rem;border-radius:8px;border:1px solid rgba(0,0,0,.08);margin-bottom:.45rem;font-size:.73rem}
+.pv-footer{padding:1.5rem 1.1rem;text-align:center}
+.pv-footer .fl{font-family:'Syne',sans-serif;font-weight:800;font-size:.92rem;margin-bottom:.35rem}
+.pv-footer .fi{font-size:.7rem;opacity:.85;margin-bottom:.65rem}
+.pv-footer button{border:none;padding:.48rem 1.1rem;border-radius:7px;font-weight:700;font-size:.7rem;cursor:pointer}
+.pv-copy{padding:.65rem;text-align:center;font-size:.6rem;color:#999;border-top:1px solid rgba(0,0,0,.08)}
+.toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid rgba(0,229,160,.35);color:var(--green);padding:.7rem 1.2rem;border-radius:10px;font-size:.82rem;font-weight:600;opacity:0;pointer-events:none;transition:.3s;z-index:600}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+.toast.err{border-color:rgba(255,92,122,.35);color:var(--red)}
+@media(max-width:800px){.blayout{grid-template-columns:1fr;grid-template-rows:auto 1fr}.panel{max-height:46vh}}
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading"><div class="spinner"></div><div style="color:var(--muted);font-size:.85rem">Loading your website…</div></div>
+
+<div id="app" style="display:none">
+  <div class="topbar"><div class="tb-logo">Adwik<span>Flow</span> · Website Builder</div>
+    <div class="tb-actions">
+      <button class="btn btn-o" onclick="location.href='dashboard.html'">← Dashboard</button>
+      <button class="btn btn-o" id="saveBtn" onclick="saveSite()">Save</button>
+      <button class="btn btn-g" onclick="publishSite()">Publish ↗</button>
+    </div>
+  </div>
+  <div class="welcome-bar"><span id="welcomeText">✓ Customize your website — add pages, edit sections, publish</span><span class="save-status" id="saveStatus"></span></div>
+  <div class="blayout">
+    <div class="panel">
+      <div class="plabel" style="margin-top:0">Pages</div>
+      <div class="hint">Naye pages add karo, switch karo, ya delete karo. Har page ke apne sections.</div>
+      <div class="page-tabs" id="pageTabs"></div>
+      <div class="tabs">
+        <div class="tab active" onclick="showTab('header',this)">Header</div>
+        <div class="tab" onclick="showTab('sections',this)">Sections</div>
+        <div class="tab" onclick="showTab('footer',this)">Footer</div>
+        <div class="tab" onclick="showTab('theme',this)">Theme</div>
+      </div>
+      <div class="pgroup active" id="pg-header">
+        <div class="field"><label>Logo / Business Name</label><input id="f-logo" oninput="render()"></div>
+        <div class="plabel">Menu Links (Header)</div>
+        <div class="hint">Add/remove/edit navigation links.</div>
+        <div id="linkList"></div>
+        <button class="btn btn-o" style="width:100%;margin-top:.4rem" onclick="addLink()">+ Add Menu Link</button>
+      </div>
+      <div class="pgroup" id="pg-sections">
+        <div class="hint">Is page ke sections. Edit karo, ▲▼ move, ✕ delete, naye add karo.</div>
+        <div id="secList"></div>
+        <div class="plabel">+ Add Section to this Page</div>
+        <div class="add-menu">
+          <div class="add-item" onclick="addSection('hero')">🎯 Hero</div>
+          <div class="add-item" onclick="addSection('about')">📄 About</div>
+          <div class="add-item" onclick="addSection('services')">🛠️ Services</div>
+          <div class="add-item" onclick="addSection('gallery')">🖼️ Gallery</div>
+          <div class="add-item" onclick="addSection('contact')">📞 Contact</div>
+          <div class="add-item" onclick="addSection('cta')">✨ CTA</div>
+        </div>
+      </div>
+      <div class="pgroup" id="pg-footer">
+        <div class="field"><label>Footer Business Name</label><input id="f-fname" oninput="render()"></div>
+        <div class="field"><label>Address / City</label><input id="f-addr" oninput="render()"></div>
+        <div class="field"><label>Phone / WhatsApp</label><input id="f-phone" oninput="render()"></div>
+        <div class="field"><label>Footer Button Text</label><input id="f-fbtn" oninput="render()"></div>
+        <div class="field"><label>Copyright Text</label><input id="f-copy" oninput="render()"></div>
+      </div>
+      <div class="pgroup" id="pg-theme">
+        <div class="field"><label>Accent Color</label><select id="f-accent" onchange="render()">
+          <option value="#D4AF37">Gold (Luxury)</option><option value="#5B5FFF" selected>Indigo</option><option value="#FF6B6B">Coral</option>
+          <option value="#0F4C81">Corporate Blue</option><option value="#2D5F3E">Forest Green</option><option value="#A259FF">Purple</option>
+        </select></div>
+        <div class="field"><label>Background Style</label><select id="f-bg" onchange="render()"><option value="light" selected>Light</option><option value="dark">Dark</option></select></div>
+      </div>
+    </div>
+    <div class="pv-wrap"><div class="site" id="site"></div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+const SUPABASE_URL = 'https://jytgogooniceczmukjyy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_sYReBaX4jW9Vgzfut0ZVxw_TYmMif41';
+// ═══════════════════════════════════════════════
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let company = null;      // {id, name, ...}
+let websiteId = null;    // websites.id (null = not saved yet)
+let dirty = false;       // unsaved changes?
+
+/* ─── DEFAULT SITE DATA (used only if no saved website) ─── */
+function defaultData(){
+  return {
+    logo:'My Business',
+    links:['Home','About','Contact'],
+    footer:{fname:'My Business',addr:'Raipur, Chhattisgarh',phone:'+91 98765 43210',fbtn:'Get a Free Quote',copy:'© 2026 My Business. All rights reserved.'},
+    theme:{accent:'#5B5FFF',bg:'light'},
+    pages:[
+      {name:'Home',sections:[
+        {type:'hero',tag:'Welcome',title:'My Business',text:'A short line about what you do and why customers should choose you.',btn:'Get a Free Quote'},
+        {type:'services',title:'Our Services',text:'Everything we offer, built around your needs.'},
+        {type:'gallery',title:'Featured Work',text:'A look at our finest work.'}
+      ]},
+      {name:'About',sections:[
+        {type:'about',title:'About Us',text:'Tell your story here — who you are and what makes you different.'},
+        {type:'cta',title:'Work with us',text:'Let us build something great together.',btn:'Contact Us'}
+      ]},
+      {name:'Contact',sections:[
+        {type:'contact',title:'Get In Touch',text:'We would love to hear from you.'}
+      ]}
+    ]
+  };
+}
+
+let data = defaultData();
+let curPage = 0;
+
+const secDef={hero:{tag:'Your Tagline',title:'Big Headline',text:'A short line about your business.',btn:'Get Started'},about:{title:'About Us',text:'Tell your story here.'},services:{title:'Our Services',text:'What you offer.'},gallery:{title:'Gallery',text:'Show your work.'},contact:{title:'Get In Touch',text:'How to reach you.'},cta:{title:'Ready to start?',text:'Book a free consultation today.',btn:'Contact Us'}};
+const secNm={hero:'🎯 Hero',about:'📄 About',services:'🛠️ Services',gallery:'🖼️ Gallery',contact:'📞 Contact',cta:'✨ CTA'};
+
+/* ─── TOAST ─── */
+let toastTimer;
+function toast(msg,isErr){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(isErr?' err':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',2400);}
+
+/* ─── AUTH + LOAD ─── */
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ window.location.href='index.html'; return; }
+
+  const { data:comp, error:e1 } = await sb.from('companies').select('*').eq('owner_id', session.user.id).maybeSingle();
+  if(e1 || !comp){ document.getElementById('loading').innerHTML='<div style="color:var(--muted)">No workspace found. <a href="index.html" style="color:var(--accent)">Go back</a></div>'; return; }
+  company = comp;
+
+  // load existing website for this company (latest)
+  const { data:site } = await sb.from('websites').select('*').eq('company_id', company.id).order('updated_at',{ascending:false}).limit(1).maybeSingle();
+  if(site && site.site_data && site.site_data.pages){
+    websiteId = site.id;
+    data = site.site_data;
+    document.getElementById('welcomeText').textContent='✓ Loaded your saved website';
+  }else{
+    // no saved website — prefill logo/footer from company name
+    data = defaultData();
+    if(company.name){ data.logo=company.name; data.footer.fname=company.name; data.footer.copy='© 2026 '+company.name+'. All rights reserved.'; }
+    document.getElementById('welcomeText').textContent='✓ New website — customize and Save';
+  }
+
+  // hydrate form fields
+  document.getElementById('f-logo').value=data.logo||'';
+  document.getElementById('f-fname').value=data.footer.fname||'';
+  document.getElementById('f-addr').value=data.footer.addr||'';
+  document.getElementById('f-phone').value=data.footer.phone||'';
+  document.getElementById('f-fbtn').value=data.footer.fbtn||'';
+  document.getElementById('f-copy').value=data.footer.copy||'';
+  document.getElementById('f-accent').value=data.theme.accent||'#5B5FFF';
+  document.getElementById('f-bg').value=data.theme.bg||'light';
+
+  document.getElementById('loading').style.display='none';
+  document.getElementById('app').style.display='block';
+  renderPageTabs();renderLinks();renderSecList();render();
+  updateSaveStatus();
+}
+
+/* ─── COLLECT current form values into data ─── */
+function collect(){
+  data.logo=document.getElementById('f-logo').value;
+  data.footer.fname=document.getElementById('f-fname').value;
+  data.footer.addr=document.getElementById('f-addr').value;
+  data.footer.phone=document.getElementById('f-phone').value;
+  data.footer.fbtn=document.getElementById('f-fbtn').value;
+  data.footer.copy=document.getElementById('f-copy').value;
+  data.theme.accent=document.getElementById('f-accent').value;
+  data.theme.bg=document.getElementById('f-bg').value;
+}
+
+function markDirty(){ dirty=true; updateSaveStatus(); }
+function updateSaveStatus(){
+  const el=document.getElementById('saveStatus');
+  el.textContent = dirty ? '● Unsaved changes' : (websiteId ? '✓ All changes saved' : '');
+  el.style.color = dirty ? 'var(--yellow)' : 'var(--muted)';
+}
+
+/* ─── SAVE to Supabase ─── */
+async function saveSite(){
+  collect();
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true; btn.textContent='Saving…';
+  try{
+    if(websiteId){
+      const { error } = await sb.from('websites').update({ site_data:data, name:data.logo||'My Website', updated_at:new Date().toISOString() }).eq('id',websiteId);
+      if(error) throw error;
+    }else{
+      const { data:ins, error } = await sb.from('websites').insert({ company_id:company.id, name:data.logo||'My Website', site_data:data }).select('id').single();
+      if(error) throw error;
+      websiteId=ins.id;
+    }
+    dirty=false; updateSaveStatus();
+    toast('✓ Website saved');
+  }catch(e){
+    console.error(e);
+    toast('Save failed: '+(e.message||'error'), true);
+  }finally{
+    btn.disabled=false; btn.textContent='Save';
+  }
+}
+
+/* ─── PUBLISH (Phase 2 — abhi slug set + published flag) ─── */
+async function publishSite(){
+  collect();
+  if(!websiteId){ await saveSite(); if(!websiteId) return; }
+  let slug=(data.logo||'mysite').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+  try{
+    const { error } = await sb.from('websites').update({ slug:slug, published:true, site_data:data, updated_at:new Date().toISOString() }).eq('id',websiteId);
+    if(error){
+      // slug may already be taken — append short id
+      slug=slug+'-'+websiteId.slice(0,4);
+      const { error:e2 } = await sb.from('websites').update({ slug:slug, published:true, site_data:data }).eq('id',websiteId);
+      if(e2) throw e2;
+    }
+    dirty=false; updateSaveStatus();
+    toast('🎉 Published! Pages: '+data.pages.length);
+  }catch(e){
+    console.error(e);
+    toast('Publish failed: '+(e.message||'error'), true);
+  }
+}
+
+/* ─── PAGES ─── */
+function renderPageTabs(){
+  document.getElementById('pageTabs').innerHTML=data.pages.map((p,i)=>'<div class="page-tab'+(i===curPage?' active':'')+'" onclick="switchPage('+i+')">📄 '+esc(p.name)+(data.pages.length>1?'<span class="x" onclick="event.stopPropagation();delPage('+i+')">✕</span>':'')+'</div>').join('')+'<button class="add-page-btn" onclick="addPage()">+ Page</button>';
+}
+function switchPage(i){curPage=i;renderPageTabs();renderSecList();render();}
+function addPage(){const nm=prompt('New page ka naam? (e.g. Services, Gallery, Pricing)','New Page');if(!nm)return;data.pages.push({name:nm.trim(),sections:[{type:'hero',tag:'',title:nm.trim(),text:'Add your content here.',btn:'Learn More'}]});curPage=data.pages.length-1;if(!data.links.includes(nm.trim()))data.links.push(nm.trim());renderPageTabs();renderLinks();renderSecList();render();markDirty();}
+function delPage(i){if(data.pages.length<=1)return;if(!confirm('Delete page "'+data.pages[i].name+'"?'))return;const nm=data.pages[i].name;data.pages.splice(i,1);const li=data.links.indexOf(nm);if(li>-1)data.links.splice(li,1);if(curPage>=data.pages.length)curPage=data.pages.length-1;renderPageTabs();renderLinks();renderSecList();render();markDirty();}
+
+/* ─── LINKS ─── */
+function renderLinks(){document.getElementById('linkList').innerHTML=data.links.map((l,i)=>'<div class="link-row"><input value="'+esc(l)+'" oninput="data.links['+i+']=this.value;render();markDirty()"><button class="icon-btn del" onclick="data.links.splice('+i+',1);renderLinks();render();markDirty()">✕</button></div>').join('');}
+function addLink(){data.links.push('New');renderLinks();render();markDirty();}
+
+/* ─── SECTIONS ─── */
+function curSecs(){return data.pages[curPage].sections;}
+function showTab(id,el){document.querySelectorAll('.pgroup').forEach(p=>p.classList.remove('active'));document.getElementById('pg-'+id).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');}
+function renderSecList(){
+  const secs=curSecs();
+  let html='<div style="font-size:.72rem;color:var(--muted);margin-bottom:.6rem">Editing page: <b style="color:#fff">'+esc(data.pages[curPage].name)+'</b></div>';
+  html+=secs.map((s,i)=>{
+    let f='<div class="field"><label>Title</label><input value="'+esc(s.title||'')+'" oninput="curSecs()['+i+'].title=this.value;render();markDirty()"></div>';
+    if(s.tag!==undefined)f='<div class="field"><label>Tagline</label><input value="'+esc(s.tag||'')+'" oninput="curSecs()['+i+'].tag=this.value;render();markDirty()"></div>'+f;
+    f+='<div class="field"><label>Text</label><textarea oninput="curSecs()['+i+'].text=this.value;render();markDirty()">'+esc(s.text||'')+'</textarea></div>';
+    if(s.btn!==undefined)f+='<div class="field"><label>Button</label><input value="'+esc(s.btn||'')+'" oninput="curSecs()['+i+'].btn=this.value;render();markDirty()"></div>';
+    return '<div class="sec-block"><div class="sec-head"><div class="sname">'+secNm[s.type]+'</div><div class="stools"><button class="icon-btn" onclick="moveSec('+i+',-1)">▲</button><button class="icon-btn" onclick="moveSec('+i+',1)">▼</button><button class="icon-btn del" onclick="delSec('+i+')">✕</button></div></div>'+f+'</div>';
+  }).join('');
+  document.getElementById('secList').innerHTML=html;
+}
+function addSection(t){curSecs().push(Object.assign({type:t},JSON.parse(JSON.stringify(secDef[t]))));renderSecList();render();markDirty();}
+function delSec(i){curSecs().splice(i,1);renderSecList();render();markDirty();}
+function moveSec(i,d){const secs=curSecs();const j=i+d;if(j<0||j>=secs.length)return;const tmp=secs[i];secs[i]=secs[j];secs[j]=tmp;renderSecList();render();markDirty();}
+
+/* ─── LIVE PREVIEW RENDER ─── */
+function render(){
+  collect();
+  const logo=data.logo||'Brand';
+  const accent=data.theme.accent;
+  const dark=data.theme.bg==='dark';
+  const bg=dark?'#14151f':'#fff',txt=dark?'#e8eaf6':'#1a1a1a',mut=dark?'#9aa':'#666',cardBg=dark?'#1e2030':'#f7f8fc';
+  const gc=[accent,'#FF6B6B','#5B5FFF','#00C2A8','#FFB930','#A259FF'];
+  let h='<div style="background:'+bg+';color:'+txt+'">';
+  h+='<div class="pv-header" style="background:'+bg+';border-bottom:1px solid rgba(0,0,0,.06)"><div class="pv-logo" style="color:'+accent+'">'+esc(logo)+'</div><div class="pv-nav">'+data.links.map(l=>'<span style="color:'+mut+'">'+esc(l)+'</span>').join('')+'</div></div>';
+  curSecs().forEach(s=>{
+    if(s.type==='hero')h+='<div class="pv-hero" style="background:linear-gradient(135deg,'+accent+','+accent+'cc);color:#fff"><div class="tag">'+esc(s.tag||'')+'</div><h1>'+esc(s.title||'')+'</h1><p>'+esc(s.text||'')+'</p><button style="background:#fff;color:'+accent+'">'+esc(s.btn||'Get Started')+' →</button></div>';
+    else if(s.type==='about')h+='<div class="pv-sec" style="background:'+bg+'"><h2 style="color:'+txt+'">'+esc(s.title||'')+'</h2><p style="color:'+mut+'">'+esc(s.text||'')+'</p></div>';
+    else if(s.type==='services'){const it=['Custom Design','Consultation','Installation','After-Sales'];h+='<div class="pv-sec" style="background:'+cardBg+'"><h2 style="color:'+txt+'">'+esc(s.title||'')+'</h2><p style="color:'+mut+'">'+esc(s.text||'')+'</p><div class="pv-feats">'+it.map(f=>'<div class="pv-feat" style="background:'+bg+';color:'+txt+'">✓ '+f+'</div>').join('')+'</div></div>';}
+    else if(s.type==='gallery'){const g=['Living','Kitchens','Office','Wardrobes','Dining','Outdoor'];h+='<div class="pv-sec" style="background:'+bg+'"><h2 style="color:'+txt+'">'+esc(s.title||'')+'</h2><p style="color:'+mut+'">'+esc(s.text||'')+'</p><div class="pv-gal">'+g.map((x,i)=>'<div class="g" style="background:linear-gradient(135deg,'+gc[i%6]+'bb,'+gc[(i+2)%6]+'88);color:#fff">🖼️</div>').join('')+'</div></div>';}
+    else if(s.type==='contact'){const p=data.footer.phone,a=data.footer.addr;h+='<div class="pv-sec" style="background:'+cardBg+'"><h2 style="color:'+txt+'">'+esc(s.title||'')+'</h2><p style="color:'+mut+';margin-bottom:.7rem">'+esc(s.text||'')+'</p><div class="pv-contact-row" style="background:'+bg+';color:'+txt+'">📍 <span>'+esc(a)+'</span></div><div class="pv-contact-row" style="background:'+bg+';color:'+txt+'">📞 <span>'+esc(p)+'</span></div></div>';}
+    else if(s.type==='cta')h+='<div class="pv-hero" style="background:'+cardBg+';color:'+txt+';padding:1.8rem 1.1rem"><h1 style="font-size:1.15rem">'+esc(s.title||'')+'</h1><p style="color:'+mut+'">'+esc(s.text||'')+'</p><button style="background:'+accent+';color:#fff">'+esc(s.btn||'Contact Us')+' →</button></div>';
+  });
+  const f=data.footer;
+  h+='<div class="pv-footer" style="background:linear-gradient(135deg,'+accent+','+accent+'cc);color:#fff"><div class="fl">'+esc(f.fname)+'</div><div class="fi">📍 '+esc(f.addr)+' · 📞 '+esc(f.phone)+'</div><button style="background:#fff;color:'+accent+'">'+esc(f.fbtn)+' →</button></div><div class="pv-copy" style="background:'+bg+';color:'+mut+'">'+esc(f.copy)+'</div></div>';
+  document.getElementById('site').innerHTML=h;
+}
+
+function esc(s){return String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));}
+
+// warn on leaving with unsaved changes
+window.addEventListener('beforeunload',e=>{ if(dirty){ e.preventDefault(); e.returnValue=''; } });
+
+init();
+</script>
+</body>
+</html>
