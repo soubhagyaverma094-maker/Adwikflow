@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdwikFlow — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#07080F;--surface:#0E1020;--card:#131629;--border:rgba(255,255,255,0.08);--accent:#5B5FFF;--accent2:#A259FF;--green:#00E5A0;--red:#FF5C7A;--yellow:#FFB930;--muted:#7B80A8;--text:#E8EAF6;--grad:linear-gradient(135deg,#5B5FFF,#A259FF)}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh}
+.loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;gap:1rem}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.layout{display:flex;min-height:100vh}
+/* SIDEBAR */
+.sidebar{width:230px;background:var(--surface);border-right:1px solid var(--border);padding:1rem 0;position:fixed;top:0;left:0;bottom:0;z-index:150;display:flex;flex-direction:column;overflow-y:auto}
+.sb-logo{padding:.6rem 1.4rem 1.1rem;font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;color:#fff;border-bottom:1px solid var(--border);margin-bottom:.6rem}
+.sb-logo span{color:var(--accent)}
+.sb-logo small{display:block;font-family:'Inter',sans-serif;font-size:.68rem;font-weight:400;color:var(--green);margin-top:.2rem}
+.nav-sec{padding:.6rem 1.4rem .3rem;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.nav-item{display:flex;align-items:center;gap:.7rem;padding:.62rem 1.4rem;color:var(--muted);font-size:.84rem;font-weight:500;cursor:pointer;border:none;background:none;width:100%;text-align:left;position:relative;text-decoration:none}
+.nav-item:hover{background:rgba(91,95,255,.07);color:var(--text)}
+.nav-item.active{background:rgba(91,95,255,.12);color:#fff}
+.nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--grad)}
+.nav-item .ic{font-size:1rem;width:20px;text-align:center}
+.soon{margin-left:auto;font-size:.58rem;background:rgba(255,185,48,.15);color:var(--yellow);padding:.1rem .4rem;border-radius:100px;font-weight:700}
+.live{margin-left:auto;font-size:.58rem;background:rgba(0,229,160,.15);color:var(--green);padding:.1rem .4rem;border-radius:100px;font-weight:700}
+.sb-bottom{margin-top:auto;padding:1rem 1.4rem;border-top:1px solid var(--border)}
+.user-pill{display:flex;align-items:center;gap:.65rem}
+.user-av{width:34px;height:34px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;color:#fff;flex-shrink:0}
+.u-name{font-size:.82rem;font-weight:600;color:#fff}
+.u-plan{font-size:.7rem;color:var(--accent)}
+.logout-btn{background:none;border:1px solid var(--border);color:var(--muted);width:100%;margin-top:.8rem;padding:.5rem;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer}
+.logout-btn:hover{color:#fff;border-color:var(--red)}
+/* MAIN */
+.main{margin-left:230px;flex:1;padding:2rem}
+.hero-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:2rem}
+.welcome{font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;color:#fff}
+.welcome-sub{color:var(--muted);font-size:.9rem;margin-top:.25rem}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.3rem}
+.kpi-lbl{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;margin-bottom:.5rem}
+.kpi-val{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;color:#fff}
+.kpi-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem}
+/* SERVICE CARDS */
+.sec-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:#fff;margin-bottom:1rem}
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem}
+.svc-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.4rem;cursor:pointer;transition:.22s;position:relative;text-decoration:none;display:block}
+.svc-card:hover{border-color:rgba(91,95,255,.4);transform:translateY(-2px)}
+.svc-card.locked{cursor:default;opacity:.6}
+.svc-card.locked:hover{transform:none;border-color:var(--border)}
+.svc-ic{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:.9rem}
+.svc-nm{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:#fff;margin-bottom:.3rem}
+.svc-ds{color:var(--muted);font-size:.8rem;line-height:1.5}
+.svc-tag{position:absolute;top:1rem;right:1rem;font-size:.6rem;font-weight:700;padding:.15rem .5rem;border-radius:100px;text-transform:uppercase}
+.tag-live{background:rgba(0,229,160,.15);color:var(--green)}
+.tag-soon{background:rgba(255,185,48,.15);color:var(--yellow)}
+.svc-go{margin-top:.9rem;font-size:.78rem;font-weight:600;color:var(--accent);display:flex;align-items:center;gap:.3rem}
+@media(max-width:900px){.sidebar{width:60px}.sb-logo{font-size:0;padding:1rem}.sb-logo span,.sb-logo small{display:none}.nav-item span:not(.ic):not(.soon):not(.live){display:none}.nav-sec{font-size:0;padding:.4rem}.soon,.live{display:none}.main{margin-left:60px;padding:1.2rem}.u-name,.u-plan{display:none}}
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading"><div class="spinner"></div><div style="color:var(--muted);font-size:.85rem">Loading dashboard…</div></div>
+
+<div class="layout" id="app" style="display:none">
+  <aside class="sidebar">
+    <div class="sb-logo">Adwik<span>Flow</span><small>✦ Active</small></div>
+    <div class="nav-sec">Overview</div>
+    <a class="nav-item active" href="#"><span class="ic">🏠</span> <span>Dashboard</span></a>
+    <a class="nav-item" href="dashboard.html"><span class="ic">👥</span> <span>Leads & CRM</span> <span class="live">Live</span></a>
+    <div class="nav-sec">Tools</div>
+    <a class="nav-item" href="builder.html"><span class="ic">🌐</span> <span>Website Builder</span> <span class="live">Live</span></a>
+    <a class="nav-item" href="#" onclick="soon(event,'AI Agent')"><span class="ic">🤖</span> <span>AI Agent</span> <span class="soon">Soon</span></a>
+    <a class="nav-item" href="#" onclick="soon(event,'Calendar')"><span class="ic">📅</span> <span>Calendar</span> <span class="soon">Soon</span></a>
+    <a class="nav-item" href="#" onclick="soon(event,'Email')"><span class="ic">📧</span> <span>Email</span> <span class="soon">Soon</span></a>
+    <a class="nav-item" href="#" onclick="soon(event,'Reviews')"><span class="ic">⭐</span> <span>Reviews</span> <span class="soon">Soon</span></a>
+    <a class="nav-item" href="#" onclick="soon(event,'Analytics')"><span class="ic">📈</span> <span>Analytics</span> <span class="soon">Soon</span></a>
+    <div class="nav-sec">Account</div>
+    <a class="nav-item" href="#" onclick="soon(event,'Billing')"><span class="ic">💳</span> <span>Billing</span> <span class="soon">Soon</span></a>
+    <div class="sb-bottom">
+      <div class="user-pill"><div class="user-av" id="userAv">U</div><div><div class="u-name" id="userName">User</div><div class="u-plan">Active Plan</div></div></div>
+      <button class="logout-btn" onclick="logout()">Log Out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="hero-row">
+      <div>
+        <div class="welcome" id="welcome">Welcome back! 👋</div>
+        <div class="welcome-sub" id="welcomeSub">Here's what's happening with your business.</div>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="kpi"><div class="kpi-lbl">Total Leads</div><div class="kpi-val" id="kpiLeads">—</div><div class="kpi-sub">auto-captured</div></div>
+      <div class="kpi"><div class="kpi-lbl">🔥 Hot Leads</div><div class="kpi-val" id="kpiHot">—</div><div class="kpi-sub">score 70+</div></div>
+      <div class="kpi"><div class="kpi-lbl">✅ Deals Closed</div><div class="kpi-val" id="kpiClosed">—</div><div class="kpi-sub">won</div></div>
+      <div class="kpi"><div class="kpi-lbl">🌐 Website</div><div class="kpi-val" id="kpiSite">—</div><div class="kpi-sub" id="kpiSiteSub">builder</div></div>
+    </div>
+
+    <div class="sec-title">Your Services</div>
+    <div class="svc-grid">
+      <a class="svc-card" href="dashboard.html">
+        <span class="svc-tag tag-live">Live</span>
+        <div class="svc-ic" style="background:rgba(0,229,160,.12)">👥</div>
+        <div class="svc-nm">Leads & CRM</div>
+        <div class="svc-ds">Track leads, scores, team performance & follow-ups.</div>
+        <div class="svc-go">Open →</div>
+      </a>
+      <a class="svc-card" href="builder.html">
+        <span class="svc-tag tag-live">Live</span>
+        <div class="svc-ic" style="background:rgba(91,95,255,.14)">🌐</div>
+        <div class="svc-nm">Website Builder</div>
+        <div class="svc-ds">Build & publish multi-page websites with live preview.</div>
+        <div class="svc-go">Open →</div>
+      </a>
+      <div class="svc-card locked">
+        <span class="svc-tag tag-soon">Soon</span>
+        <div class="svc-ic" style="background:rgba(162,89,255,.14)">🤖</div>
+        <div class="svc-nm">AI Agent</div>
+        <div class="svc-ds">24/7 AI that replies to WhatsApp, Email & SMS.</div>
+      </div>
+      <div class="svc-card locked">
+        <span class="svc-tag tag-soon">Soon</span>
+        <div class="svc-ic" style="background:rgba(0,229,160,.1)">📅</div>
+        <div class="svc-nm">Appointment Booking</div>
+        <div class="svc-ds">Let clients book slots with auto reminders.</div>
+      </div>
+      <div class="svc-card locked">
+        <span class="svc-tag tag-soon">Soon</span>
+        <div class="svc-ic" style="background:rgba(91,95,255,.14)">📧</div>
+        <div class="svc-nm">Email Campaigns</div>
+        <div class="svc-ds">Design & send email campaigns to your contacts.</div>
+      </div>
+      <div class="svc-card locked">
+        <span class="svc-tag tag-soon">Soon</span>
+        <div class="svc-ic" style="background:rgba(255,185,48,.1)">⭐</div>
+        <div class="svc-nm">Reviews</div>
+        <div class="svc-ds">Collect & monitor Google reviews automatically.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://jytgogooniceczmukjyy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_sYReBaX4jW9Vgzfut0ZVxw_TYmMif41';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let company=null;
+
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ window.location.href='index.html'; return; }
+
+  const { data:comp } = await sb.from('companies').select('*').eq('owner_id', session.user.id).maybeSingle();
+  if(!comp){ document.getElementById('loading').innerHTML='<div style="color:var(--muted)">No workspace found. <a href="index.html" style="color:var(--accent)">Go back</a></div>'; return; }
+  company=comp;
+
+  document.getElementById('userName').textContent=comp.name||'User';
+  document.getElementById('userAv').textContent=(comp.name||'U')[0].toUpperCase();
+  document.getElementById('welcome').textContent='Welcome back, '+(comp.name||'there')+'! 👋';
+
+  // load quick stats
+  const [ld, ws] = await Promise.all([
+    sb.from('leads').select('status,priority').eq('company_id', comp.id),
+    sb.from('websites').select('published').eq('company_id', comp.id)
+  ]);
+  const leads = ld.data || [];
+  document.getElementById('kpiLeads').textContent = leads.length;
+  document.getElementById('kpiHot').textContent = leads.filter(l=>l.priority==='hot').length;
+  document.getElementById('kpiClosed').textContent = leads.filter(l=>l.status==='closed').length;
+  const sites = ws.data || [];
+  const pub = sites.filter(s=>s.published).length;
+  document.getElementById('kpiSite').textContent = sites.length ? (pub?'Live':'Draft') : 'None';
+  document.getElementById('kpiSiteSub').textContent = sites.length ? (pub?'published':'not published yet') : 'not created';
+
+  document.getElementById('loading').style.display='none';
+  document.getElementById('app').style.display='flex';
+}
+
+function soon(e,name){ e.preventDefault(); alert(name+' is coming soon! We are building it step by step.'); }
+
+async function logout(){
+  await sb.auth.signOut();
+  window.location.href='index.html';
+}
+
+init();
+</script>
+</body>
+</html>
