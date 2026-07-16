@@ -216,6 +216,10 @@ async function connectChannel(){
   const btn=document.getElementById('saveBtn');
   btn.disabled=true; const old=btn.textContent; btn.textContent='Connecting…';
   try{
+    // 1. deactivate any other company's channel using this same number (avoids webhook conflict)
+    await sb.from('channels').update({ active:false }).eq('provider_id', pid).neq('company_id', company.id);
+
+    // 2. save/update this company's channel
     if(channel){
       const { error } = await sb.from('channels').update({ provider_id:pid, identifier:pid, active:true }).eq('id', channel.id);
       if(error) throw error;
@@ -223,14 +227,33 @@ async function connectChannel(){
       const { error } = await sb.from('channels').insert({ company_id:company.id, type:'whatsapp', provider_id:pid, identifier:pid, active:true });
       if(error) throw error;
     }
+
+    // 3. auto-activate features so leads start flowing immediately
+    await activateFeatures();
+
     await loadChannel();
-    toast('✓ WhatsApp connected');
+    toast('✓ WhatsApp connected — leads are now live');
   }catch(e){
     console.error(e);
     toast('Failed: '+(e.message||'error'), true);
   }finally{
     btn.disabled=false; btn.textContent=old;
   }
+}
+
+async function activateFeatures(){
+  const wanted = ['leads','chatbot'];
+  try{
+    const { data:existing } = await sb.from('subscriptions').select('feature').eq('company_id', company.id);
+    const have = new Set((existing||[]).map(s=>s.feature));
+    const toAdd = wanted.filter(f=>!have.has(f)).map(f=>({
+      company_id: company.id, feature: f, status: 'active', started_at: new Date().toISOString()
+    }));
+    if(toAdd.length){
+      const { error } = await sb.from('subscriptions').insert(toAdd);
+      if(error) console.error('subscription insert error', error);
+    }
+  }catch(e){ console.error('activateFeatures failed', e); }
 }
 
 async function disconnect(){
