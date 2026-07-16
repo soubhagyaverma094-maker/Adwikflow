@@ -217,10 +217,10 @@ async function connectChannel(){
   btn.disabled=true; const old=btn.textContent; btn.textContent='Connecting…';
   try{
     if(channel){
-      const { error } = await sb.from('channels').update({ provider_id:pid, active:true }).eq('id', channel.id);
+      const { error } = await sb.from('channels').update({ provider_id:pid, identifier:pid, active:true }).eq('id', channel.id);
       if(error) throw error;
     }else{
-      const { error } = await sb.from('channels').insert({ company_id:company.id, type:'whatsapp', provider_id:pid, active:true });
+      const { error } = await sb.from('channels').insert({ company_id:company.id, type:'whatsapp', provider_id:pid, identifier:pid, active:true });
       if(error) throw error;
     }
     await loadChannel();
